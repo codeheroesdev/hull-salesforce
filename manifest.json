@@ -1,0 +1,106 @@
+{
+  "name" : "Hull Salesforce",
+  "version" : "0.1.0",
+  "description" : "Hull <> Salesforce sync",
+  "readme" : "readme.md",
+  "picture": "picture.png",
+  "settings" : [],
+  "private_settings" : [
+    {
+      "name": "salesforce_login",
+      "type": "string",
+      "required" : true
+    },
+    {
+      "name": "salesforce_password",
+      "type": "string",
+      "required" : true
+    },
+    {
+      "name": "salesforce_login_url",
+      "type": "string",
+      "required" : true,
+      "default" : "https://login.salesforce.com"
+    },
+    {
+      "name" : "leads_mapping",
+      "title" : "Leads",
+      "type" : "array",
+      "default" : [
+        { "hull_field_name" : "first_name", "salesforce_field_name" : "FirstName", "default_value" : "[Unknown]", "overwrite" : false },
+        { "hull_field_name" : "last_name", "salesforce_field_name" : "LastName", "default_value" : "[Unknown]", "overwrite" : false },
+        { "hull_field_name" : "email", "salesforce_field_name" : "Email", "overwrite" : false }
+      ],
+      "items" : {
+        "type" : "object",
+        "properties" : {
+          "hull_field_name" : {
+            "type" : "string",
+            "title" : "Hull Field"
+          },
+          "salesforce_field_name" : {
+            "type" : "string",
+            "title" : "Salesforce Field"
+          },
+          "overwrite" : {
+            "type" : "boolean",
+            "title" : "Data from Hull overwrites data on Salesforce",
+            "default" : false
+          },
+          "default_value" : {
+            "type" : "string",
+            "title" : "Default Value"
+          },
+          "tpl" : {
+            "type" : "string",
+            "title" : "Template for calculated value"
+          }
+        },
+        "required" : [
+          "hull_field_name",
+          "salesforce_field_name"
+        ]
+      }
+    },
+    {
+      "name" : "contacts_mapping",
+      "title" : "Contact",
+      "type" : "array",
+      "default" : [
+        { "hull_field_name" : "first_name", "salesforce_field_name" : "FirstName", "default_value" : "[Unknown]", "overwrite" : false },
+        { "hull_field_name" : "last_name", "salesforce_field_name" : "LastName", "default_value" : "[Unknown]", "overwrite" : false },
+        { "hull_field_name" : "email", "salesforce_field_name" : "Email", "overwrite" : false }
+      ],
+      "items" : {
+        "type" : "object",
+        "properties" : {
+          "hull_field_name" : {
+            "type" : "string",
+            "title" : "Hull Field"
+          },
+          "salesforce_field_name" : {
+            "type" : "string",
+            "title" : "Salesforce Field"
+          },
+          "overwrite" : {
+            "type" : "boolean",
+            "title" : "Data from Hull overwrites data on Salesforce",
+            "default" : false
+          },
+          "default_value" : {
+            "type" : "string",
+            "title" : "Default Value"
+          },
+          "tpl" : {
+            "type" : "string",
+            "title" : "Template for calculated value"
+          }
+        },
+        "required" : [
+          "hull_field_name",
+          "salesforce_field_name"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+#!/usr/bin/env node
+
+require("babel/register");
+var argv = require('minimist')(process.argv);
+var Server = require('../src/server').Server;
+var config = require('../src/config').config(process.env, argv);
+
+Server(config).listen(process.env.PORT || 5000);
