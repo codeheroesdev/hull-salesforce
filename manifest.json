@@ -1,6 +1,6 @@
 {
   "name" : "Hull Salesforce",
-  "version" : "0.1.0",
+  "version" : "0.1.1",
   "description" : "Hull <> Salesforce sync",
   "readme" : "readme.md",
   "picture": "picture.png",
@@ -102,5 +102,6 @@
         ]
       }
     }
-  ]
+  ],
+  "subscriptions" : [ { "url" : "/notify" } ]
 }

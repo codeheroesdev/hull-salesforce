@@ -1,10 +1,19 @@
 import express from 'express';
 import { Agent } from './agent';
 import path from 'path';
-var bodyParser = require('body-parser')
+var bodyParser = require('body-parser');
+
+var SNSClient = require('aws-snsclient');
+
+var handleNotification = SNSClient(function(err, message) {
+    if (err) {
+        console.warn('OOPS: ', err);
+    }
+    console.log(message);
+});
+
 
 export function Server(config) {
-
 
   var syncing = {};
   let app = express();
@@ -25,8 +34,10 @@ export function Server(config) {
   app.use(bodyParser.urlencoded({ extended: false }));
   app.use(bodyParser.json());
 
+  app.post('/notify', handleNotification);
 
   app.post('/sync', (req, res)=> {
+
     res.type('application/json');
 
     const orgUrl = req.body.orgUrl || process.env.HULL_ORG_URL;

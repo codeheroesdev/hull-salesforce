@@ -44,6 +44,7 @@
   },
   "homepage": "https://github.com/hull-ships/hullforce",
   "dependencies": {
+    "aws-snsclient": "^0.2.0",
     "babel": "^5.8.3",
     "basic-auth": "^1.0.3",
     "body-parser": "^1.14.1",
