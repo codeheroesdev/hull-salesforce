@@ -1,8 +1,5 @@
 jest.dontMock('../sync');
-jest.dontMock('object-assign');
 jest.dontMock('hogan.js');
-
-var assign = require('object-assign');
 
 let Mappings = {
   Lead: {
@@ -43,7 +40,11 @@ describe('getUpdatedFields', ()=> {
   })
 
   it('overwrites field except if it is defaultValue', ()=> {
-    let LeadWithCity = assign({}, Lead, { City: 'Paris', FirstName: '[Unknown]' });
+    let LeadWithCity = {
+      ...Lead,
+      City: 'Paris',
+      FirstName: '[Unknown]'
+    };
     let updates = sync.getUpdatedFields(User, LeadWithCity, Mappings.Lead);
     expect(updates).toEqual({
       Email: 'bob@bob.com',

@@ -1,9 +1,9 @@
+import _ from 'lodash';
 import Hull from 'hull';
 import { SF } from './sf';
 import { syncRecords } from './sync';
-import { getShipConfig } from './config';
+import { getShipConfig, buildConfigFromShip } from './config';
 import { EventEmitter } from 'events';
-import assign from 'object-assign';
 import jsforce from 'jsforce';
 
 function fetchQuery(sync) {
@@ -29,8 +29,17 @@ export class Agent extends EventEmitter {
   }
 
   static syncShip(orgUrl, shipId, secret) {
-    return getShipConfig(orgUrl, shipId, secret).then( config => {
+    return getShipConfig(orgUrl, shipId, secret).then(config => {
       return new Agent(config).sync();
+    });
+  }
+
+  static syncUsers(hull, ship, users) {
+    const { orgUrl, platformId, platformSecret } = hull.configuration();
+    const config = buildConfigFromShip(ship, orgUrl, platformSecret);
+    const agent = new Agent(config);
+    return agent.connect().then(() => {
+      return agent.syncUsers(users);
     });
   }
 
@@ -53,7 +62,6 @@ export class Agent extends EventEmitter {
       if (login && password) {
         conn.login(login, password, (err, userInfo)=> {
           if (err) {
-            console.warn('Error', err);
             this.emit('error', err);
             reject(err);
           } else {
@@ -68,7 +76,7 @@ export class Agent extends EventEmitter {
       }
 
       // Hull
-      this.hull = Hull.client(this.config.hull);
+      this.hull = new Hull(this.config.hull);
 
     });
 
@@ -85,7 +93,7 @@ export class Agent extends EventEmitter {
     return this.connect().then(()=> {
       return this.startSync();
     }, (err)=> {
-      this.emit('error', err)
+      this.emit('error', err);
       return err;
     });
   }
@@ -114,7 +122,10 @@ export class Agent extends EventEmitter {
       });
       this.syncPage(1).catch(reject);
     });
-    this._result.catch((err) => this.emit('error', err))
+
+    this._result.catch((err) => {
+      this.emit('error', err)
+    })
     return this._result;
   }
 
@@ -124,30 +135,34 @@ export class Agent extends EventEmitter {
     let per_page = this.config.per_page || 100;
     let params = { raw: true, page: pageNum, per_page, query };
 
-    return new Promise((resolve, reject) => {
-      this.hull.post('search/user_reports', params, (err, response) => {
-        err ? reject(err) : resolve(response);
-      })
-    });
+    return this.hull.post('search/user_reports', params);
   }
 
-  syncUsers(users, mappings) {
+  syncUsers(users) {
+    const mappings = this.config.mappings;
     let emails = users.map((u)=> u.email);
     let sfRecords = this.sf.searchEmails(emails, mappings);
 
     return sfRecords.then((searchResults)=> {
-      let records = syncRecords(searchResults, users, { mappings });
-      return ['Lead', 'Contact'].reduce((results, recordType) => {
-        let data = records[recordType];
+      let recordsByType = syncRecords(searchResults, users, { mappings });
 
-        if (data && data.length > 0) {
-          results[recordType] = {
-            records: data,
-            results: this.sf.upsert(recordType, data)
-          }
+      var upsertResults = ['Lead', 'Contact'].map((recordType) => {
+        let records = recordsByType[recordType];
+        if (records && records.length > 0) {
+          return this.sf.upsert(recordType, records).then((results) => {
+            return { recordType, results, records };
+          });
         }
-        return results;
-      }, {});
+      });
+
+      return Promise.all(upsertResults).then((results) => {
+        return results.reduce((rr, r) => {
+          if (r && r.recordType) {
+            rr[r.recordType] = r;
+          }
+          return rr
+        }, {});
+      });
 
     });
   }
@@ -160,7 +175,11 @@ export class Agent extends EventEmitter {
         this.fetchPage(pageNum).then((users)=> {
           this.emit('fetch', users);
           this.syncUsers(users.data, mappings).then((records)=> {
-            let result = assign({ page: pageNum }, users, { records });
+            const result = {
+              page: pageNum,
+              ...users,
+              records: records
+            }
             this.emit('data', result);
             resolve(result);
           }, reject);

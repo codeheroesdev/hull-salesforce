@@ -9,7 +9,7 @@
     "start": "./bin/start"
   },
   "engines": {
-    "node": "0.12.x",
+    "node": "5.x",
     "npm": "2.x"
   },
   "jest": {
@@ -44,19 +44,14 @@
   },
   "homepage": "https://github.com/hull-ships/hullforce",
   "dependencies": {
-    "aws-snsclient": "^0.2.0",
     "babel": "^5.8.3",
-    "basic-auth": "^1.0.3",
-    "body-parser": "^1.14.1",
-    "es6-promise": "^2.3.0",
+    "body-parser": "^1.14.2",
     "express": "^4.13.1",
     "hogan.js": "^3.0.2",
-    "hull": "^0.4.1",
-    "install": "^0.1.8",
+    "hull": "^0.5.2",
     "jsforce": "^1.4.1",
     "lodash": "^3.10.0",
-    "minimist": "^1.1.2",
-    "object-assign": "^3.0.0"
+    "minimist": "^1.1.2"
   },
   "devDependencies": {
     "merge-stream": "^1.0.0",
@@ -70,6 +65,6 @@
     "babel-jest": "^5.3.0",
     "babel-loader": "^5.1.4",
     "gulp": "^3.9.0",
-    "jest-cli": "^0.4.17"
+    "jest-cli": "^0.8.2"
   }
 }

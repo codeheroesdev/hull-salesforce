@@ -1,4 +1,3 @@
-import { Promise } from 'es6-promise';
 import { uniq } from 'lodash';
 
 const RESERVED_CHARACTERS_REGEXP = /\?|\&|\||\!|\{|\}|\[|\]|\(|\)|\^|\~|\*|\:|\+|\-|\"|\'/ig;
@@ -15,8 +14,8 @@ export class SF {
   upsert(type, data, key='Email') {
     const SObject = this.connection.sobject(type);
     return new Promise((resolve, reject)=> {
-      SObject.upsert(data, key, (err, res)=> {
-        err ? reject(err) : resolve(res);
+      return SObject.upsert(data, key, (err, res)=> {
+        return err ? reject(err) : resolve(res);
       });
     });
   }

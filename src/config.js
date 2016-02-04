@@ -1,4 +1,3 @@
-import assign from 'object-assign';
 import { resolve } from 'path';
 import { readFileSync } from 'fs';
 import { createHmac } from 'crypto';
@@ -7,9 +6,9 @@ import Hull from 'hull';
 export function config(env={}, options={}) {
   var defaults = {
     hull: {
-      appId: env.HULL_APP_ID,
+      platformId: env.HULL_APP_ID,
       orgUrl: env.HULL_ORG_URL,
-      appSecret: env.HULL_APP_SECRET
+      platformSecret: env.HULL_APP_SECRET
     },
     salesforce: {
       login: env.SALESFORCE_LOGIN,
@@ -55,8 +54,10 @@ export function config(env={}, options={}) {
     cfg = JSON.parse(readFileSync(resolve(filename)));
   }
 
-
-  return assign({}, defaults, cfg);
+  return {
+    ...defaults,
+    ...cfg
+  };
 }
 
 function generateShipSecret(shipId, secret) {
@@ -65,12 +66,13 @@ function generateShipSecret(shipId, secret) {
           .digest('hex');
 }
 
-function getHullClient(orgUrl, appId, appSecret) {
-  return Hull.client({ orgUrl, appId, appSecret });
+function getHullClient(orgUrl, platformId, platformSecret) {
+  return new Hull({ orgUrl, platformId, platformSecret });
 }
 
 
-function buildConfigFromShip(ship, orgUrl, appSecret) {
+export function buildConfigFromShip(ship, orgUrl, platformSecret) {
+
   const {
     salesforce_login,
     salesforce_password,
@@ -101,7 +103,7 @@ function buildConfigFromShip(ship, orgUrl, appSecret) {
   }, {});
 
   return {
-    hull: { orgUrl, appId: ship.id, appSecret },
+    hull: { orgUrl, platformId: ship.id, platformSecret },
     salesforce: {
       login: salesforce_login,
       password: salesforce_password,
@@ -116,14 +118,14 @@ function buildConfigFromShip(ship, orgUrl, appSecret) {
 }
 
 
-export function getShipConfig(orgUrl, appId, secret) {
-  const appSecret = generateShipSecret(appId, secret);
-  const hull = getHullClient(orgUrl, appId, appSecret);
-  return new Promise((resolve, reject) => {
-    hull.get(appId, (err, ship) => {
-      if (err) return reject(err);
-      resolve(buildConfigFromShip(ship, orgUrl, appSecret));
-    })
+export function getShipConfig(orgUrl, shipId, secret) {
+  const appSecret = secret || generateShipSecret(shipId, process.env.SECRET);
+  const hull = getHullClient(orgUrl, shipId, appSecret);
+  return hull.get(shipId).then(ship => {
+    if (!ship.private_settings) {
+      throw new Error("Invalid hull credentials");
+    }
+    return buildConfigFromShip(ship, orgUrl, appSecret);
   });
 }
 

@@ -1,27 +1,29 @@
 import express from 'express';
 import { Agent } from './agent';
 import path from 'path';
-var bodyParser = require('body-parser');
-
-var SNSClient = require('aws-snsclient');
-
-var handleNotification = SNSClient(function(err, message) {
-    if (err) {
-        console.warn('OOPS: ', err);
-    }
-    console.log(message);
-});
-
+import { NotifHandler } from 'hull';
+import bodyParser from 'body-parser';
 
 export function Server(config) {
 
-  var syncing = {};
-  let app = express();
+
+  const notifHandler = NotifHandler({
+    events: {
+      'user_report:update' : function({ message }, { ship, hull }) {
+        console.warn("Hull.config: ", hull.configuration());
+        return Agent.syncUsers(hull, ship, [ message.user ]);
+      }
+    }
+  });
+
+  const syncing = {};
+  const app = express();
 
   function syncDone(shipId) {
+    console.warn("Boom done !", shipId);
     setTimeout(()=> {
       syncing[shipId] = false;
-    }, 30000)
+    }, 3000);
   }
 
   function isSyncing(shipId) {
@@ -34,30 +36,36 @@ export function Server(config) {
   app.use(bodyParser.urlencoded({ extended: false }));
   app.use(bodyParser.json());
 
-  app.post('/notify', handleNotification);
+  app.post('/notify', notifHandler);
 
   app.post('/sync', (req, res)=> {
 
     res.type('application/json');
 
-    const orgUrl = req.body.orgUrl || process.env.HULL_ORG_URL;
-    const shipId = req.body.shipId || process.env.HULL_SHIP_ID;
+    const orgUrl = req.body.organization || req.body.orgUrl || process.env.HULL_ORG_URL;
+    const shipId = req.body.ship || req.body.shipId || process.env.HULL_SHIP_ID;
     const secret = req.body.secret || process.env.SECRET;
+
+    if (!orgUrl || !shipId) {
+      return res.status(400).end(JSON.stringify({ status: 400, error: "Missing orgUrl and shipId"  }));
+    }
 
     if (!isSyncing(shipId)) {
       const sync = syncing[shipId] = Agent.syncShip(orgUrl, shipId, secret);
 
       sync.then(function(response) {
-        console.warn('Sync Done !', response);
-        res.status(200).end(JSON.stringify({ response: response, shipId: shipId, orgUrl: orgUrl }));
+        res.status(200)
+        res.end(JSON.stringify({ response: response, shipId: shipId, orgUrl: orgUrl }));
         syncDone(shipId);
       }, function(err) {
-        res.status(401).end(JSON.stringify({ status: 401, error: err.toString() }));
+        res.status(401)
+        res.end(JSON.stringify({ status: 401, error: err.toString() }));
         syncDone(shipId);
       });
 
       sync.catch(function(err) {
-        res.status(401).end(JSON.stringify({ status: 500, error: err.toString() }));
+        res.status(401)
+        res.end(JSON.stringify({ status: 500, error: err.toString() }));
         syncDone(shipId);
       })
     } else {

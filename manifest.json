@@ -4,6 +4,7 @@
   "description" : "Hull <> Salesforce sync",
   "readme" : "readme.md",
   "picture": "picture.png",
+  "ui": false,
   "settings" : [],
   "private_settings" : [
     {
