@@ -20,7 +20,6 @@ export function Server(config) {
   const app = express();
 
   function syncDone(shipId) {
-    console.warn("Boom done !", shipId);
     setTimeout(()=> {
       syncing[shipId] = false;
     }, 3000);
