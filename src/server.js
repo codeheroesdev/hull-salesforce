@@ -13,7 +13,6 @@ export function Server(config) {
     },
     events: {
       'user_report:update' : function({ message }, { ship, hull }) {
-        console.warn("Hull.config: ", hull.configuration());
         return Agent.syncUsers(hull, ship, [ message.user ]);
       }
     }
