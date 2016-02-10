@@ -8,6 +8,9 @@ export function Server(config) {
 
 
   const notifHandler = NotifHandler({
+    onError: function(message, status) {
+      console.warn("Error", status, message);
+    },
     events: {
       'user_report:update' : function({ message }, { ship, hull }) {
         console.warn("Hull.config: ", hull.configuration());
