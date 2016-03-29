@@ -14,7 +14,7 @@ export function Server(config) {
     events: {
       'user_report:update' : function({ message }, { ship, hull }) {
         try {
-          Agent.syncUsers(hull, ship, [ message.user ]);
+          Agent.syncUsers(hull, ship, [ message ]);
         } catch(err) {
           console.warn("Error in Users sync", err);
           return err;
