@@ -6,9 +6,9 @@ import Hull from 'hull';
 export function config(env={}, options={}) {
   var defaults = {
     hull: {
-      platformId: env.HULL_APP_ID,
-      orgUrl: env.HULL_ORG_URL,
-      platformSecret: env.HULL_APP_SECRET
+      id: env.HULL_APP_ID,
+      organization: env.HULL_ORG_URL,
+      secret: env.HULL_APP_SECRET
     },
     salesforce: {
       login: env.SALESFORCE_LOGIN,
@@ -66,12 +66,12 @@ function generateShipSecret(shipId, secret) {
           .digest('hex');
 }
 
-function getHullClient(orgUrl, platformId, platformSecret) {
-  return new Hull({ orgUrl, platformId, platformSecret });
+function getHullClient(organization, id, secret) {
+  return new Hull({ organization, id, secret });
 }
 
 
-export function buildConfigFromShip(ship, orgUrl, platformSecret) {
+export function buildConfigFromShip(ship, organization, secret) {
 
   const {
     salesforce_login,
@@ -103,7 +103,7 @@ export function buildConfigFromShip(ship, orgUrl, platformSecret) {
   }, {});
 
   return {
-    hull: { orgUrl, platformId: ship.id, platformSecret },
+    hull: { organization, id: ship.id, secret },
     salesforce: {
       login: salesforce_login,
       password: salesforce_password,
