@@ -13,7 +13,13 @@ export function Server(config) {
     },
     events: {
       'user_report:update' : function({ message }, { ship, hull }) {
-        return Agent.syncUsers(hull, ship, [ message.user ]);
+        try {
+          Agent.syncUsers(hull, ship, [ message.user ]);
+        } catch(err) {
+          console.warn("Error in Users sync", err);
+          return err;
+        }
+
       }
     }
   });
