@@ -40,9 +40,6 @@ export class Agent extends EventEmitter {
     const agent = new Agent(config);
     return agent.connect().then(() => {
       return agent.syncUsers(users);
-    }, (err) => {
-      console.warn('Error syncing users', err);
-      return false;
     });
   }
 
@@ -56,6 +53,11 @@ export class Agent extends EventEmitter {
   connect() {
     if (this._connect) return this._connect;
     // Configure with Salesforce and Hull credentials
+
+    this.on('error', (err) => {
+      console.warn('Sync Error ', err);
+    });
+
     let connect = new Promise((resolve, reject)=> {
       // Salesforce
       let { login, password, loginUrl } = this.config.salesforce;
