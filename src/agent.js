@@ -40,6 +40,9 @@ export class Agent extends EventEmitter {
     const agent = new Agent(config);
     return agent.connect().then(() => {
       return agent.syncUsers(users);
+    }, (err) => {
+      console.warn('Error syncing users', err);
+      return false;
     });
   }
 
