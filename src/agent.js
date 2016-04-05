@@ -7,6 +7,7 @@ import { EventEmitter } from 'events';
 import jsforce from 'jsforce';
 
 function fetchQuery(sync) {
+  // TODO add support for segmentId filtering
   return {
     filtered: {
       query: { match_all: {} },
@@ -38,9 +39,10 @@ export class Agent extends EventEmitter {
     const { orgUrl, platformId, platformSecret } = hull.configuration();
     const config = buildConfigFromShip(ship, orgUrl, platformSecret);
     const agent = new Agent(config);
-    if (agent.shouldSync(users, ship)) {
+    const matchingUsers = agent.getUsersMatchingSegment(users);
+    if (agent.shouldSync(matchingUsers, ship)) {
       return agent.connect().then(() => {
-        return agent.syncUsers(users.map(u => u.user));
+        return agent.syncUsers(matchingUsers.map(u => u.user));
       });
     }
   }
@@ -94,6 +96,15 @@ export class Agent extends EventEmitter {
 
     this._connect = connect;
     return connect;
+  }
+
+  getUsersMatchingSegment(users) {
+    const { segmentId } = this.config.sync || {};
+    if (!segmentId) return users;
+    return users.filter((user) => {
+      const ids = (user.segments || []).map(s => s.id);
+      return ids.includes(segmentId);
+    });
   }
 
   shouldSync(users, ship) {

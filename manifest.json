@@ -24,6 +24,14 @@
       "default" : "https://login.salesforce.com"
     },
     {
+      "name": "segment_id",
+      "type": "string",
+      "title": "Segment ID to sync (optional)",
+      "description" : "Select a segment to sync with Salesforce",
+      "pattern": "^[a-z0-9]{24}$",
+      "format" : "hidden"
+    },
+    {
       "name" : "leads_mapping",
       "title" : "Leads",
       "type" : "array",
