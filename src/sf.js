@@ -6,6 +6,13 @@ function escapeSOSL(str) {
   return str.replace(RESERVED_CHARACTERS_REGEXP, (c) => "\\" + c);
 }
 
+function log(a,b,c) {
+  if (process.env.DEBUG) {
+    console.log(a,b,c)
+  }
+}
+
+
 export class SF {
   constructor(connection) {
     this.connection = connection;
@@ -13,8 +20,10 @@ export class SF {
 
   upsert(type, data, key='Email') {
     const SObject = this.connection.sobject(type);
+    log('upsert', {type, data});
     return new Promise((resolve, reject)=> {
       return SObject.upsert(data, key, (err, res)=> {
+        log('upsert result', { err, res });
         return err ? reject(err) : resolve(res);
       });
     });
