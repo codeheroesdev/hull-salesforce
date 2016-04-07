@@ -126,6 +126,7 @@ export class Agent extends EventEmitter {
   }
 
   shouldSync(users, ship) {
+    return true
     try {
       const { leads_mapping, contacts_mapping } = ship.private_settings || {};
 
