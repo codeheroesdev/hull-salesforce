@@ -108,7 +108,7 @@ export class Agent extends EventEmitter {
     });
 
     connect.catch((err) => {
-      console.log('Error establishing connection with Salesforce: ', err)
+      console.log('Error establishing connection with Salesforce: for ', login, err)
       return err;
     })
 
