@@ -40,9 +40,18 @@ export function getUpdatedFields(user, sfObject, mapping) {
       if (typeof(def) === 'string') {
         val = user[def];
       } else if (def.key) {
-        val = get(user, def.key, defaultValue);
+        val = get(user, def.key);
       } else if (def.tpl) {
         val = Hogan.compile(def.tpl).render(user);
+      }
+
+
+      if (defaultValue && (!val || val.length == 0)) {
+        try {
+          val = Hogan.compile(defaultValue).render(user);
+        } catch (err) {
+          val = defaultValue;
+        }
       }
 
       if (val && (val !== orig)) mapped[f] = val;

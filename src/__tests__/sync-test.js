@@ -9,7 +9,7 @@ let Mappings = {
       LastName: { key: 'last_name', defaultValue: '[Unknown]', overwrite: true },
       Email: 'email',
       Company: { key: 'traits_company', defaultValue: '[Unknown]' },
-      City: { key: 'city', defaultValue: '[NoWhere]', overwrite: true },
+      City: { key: 'city', defaultValue: 'City of {{last_name}}', overwrite: true },
       Foo: { tpl: 'Hello({{id}})' }
     }
   },
@@ -34,7 +34,7 @@ describe('getUpdatedFields', ()=> {
       Email: 'bob@bob.com',
       LastName: 'Dufion',
       Company: '[Unknown]',
-      City: '[NoWhere]',
+      City: 'City of Dufion',
       Foo: 'Hello(123)'
     });
   })
@@ -86,7 +86,7 @@ describe('syncRecords', ()=> {
         Company: '[Unknown]',
         Email: 'bob@bob.com',
         Foo: 'Hello(123)',
-        City: '[NoWhere]' },
+        City: 'City of Dufion' },
       { FirstName: 'New',
         LastName: 'User',
         Email: 'new@user.com',
