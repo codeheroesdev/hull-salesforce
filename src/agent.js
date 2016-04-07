@@ -35,33 +35,23 @@ export class Agent extends EventEmitter {
     return new Agent(config).sync();
   }
 
-  static syncShip(orgUrl, shipId, secret) {
-    return getShipConfig(orgUrl, shipId, secret).then(config => {
+  static syncShip(organization, id, secret) {
+    return getShipConfig(organization, id, secret).then(config => {
       return new Agent(config).sync();
     });
   }
 
   static syncUsers(hull, ship, users) {
-    const { orgUrl, platformId, platformSecret } = hull.configuration();
-    const config = buildConfigFromShip(ship, orgUrl, platformSecret);
+    const { organization, secret } = hull.configuration();
+    const config = buildConfigFromShip(ship, organization, secret);
     const agent = new Agent(config);
     const matchingUsers = agent.getUsersMatchingSegment(users);
-    log('syncUsers', {
-      users: users.length,
-      matchingUsers: matchingUsers.length,
-      firstUser: matchingUsers[0]
-    });
     if (matchingUsers.length > 0) {
       if (agent.shouldSync(matchingUsers, ship)) {
-        log('--------------------> starting sync on ', matchingUsers);
         return agent.connect().then(() => {
           return agent.syncUsers(matchingUsers.map(u => u.user));
         });
-      } else {
-        log('no changes')
       }
-    } else {
-      log('no matchingUsers')
     }
   }
 
