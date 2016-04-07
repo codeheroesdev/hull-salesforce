@@ -53,7 +53,7 @@ export class Agent extends EventEmitter {
     });
     if (matchingUsers.length > 0) {
       if (agent.shouldSync(matchingUsers, ship)) {
-        log('starting sync on ', matchingUsers);
+        log('--------------------> starting sync on ', matchingUsers);
         return agent.connect().then(() => {
           return agent.syncUsers(matchingUsers.map(u => u.user));
         });
