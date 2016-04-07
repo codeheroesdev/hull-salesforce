@@ -6,6 +6,12 @@ import { getShipConfig, buildConfigFromShip } from './config';
 import { EventEmitter } from 'events';
 import jsforce from 'jsforce';
 
+function log(a,b,c) {
+  if (process.env.DEBUG) {
+    console.log(a,b,c)
+  }
+}
+
 function fetchQuery(sync) {
   // TODO add support for segmentId filtering
   return {
@@ -40,6 +46,10 @@ export class Agent extends EventEmitter {
     const config = buildConfigFromShip(ship, orgUrl, platformSecret);
     const agent = new Agent(config);
     const matchingUsers = agent.getUsersMatchingSegment(users);
+    console.log('syncUsers', {
+      users: users.map(u => u.email),
+      matchingUsers: matchingUsers.map(u => u.email)
+    });
     if (agent.shouldSync(matchingUsers, ship)) {
       return agent.connect().then(() => {
         return agent.syncUsers(matchingUsers.map(u => u.user));
