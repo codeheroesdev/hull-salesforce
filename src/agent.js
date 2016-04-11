@@ -2,6 +2,7 @@ import _ from 'lodash';
 import Hull from 'hull';
 import { SF } from './sf';
 import { syncRecords } from './sync';
+import Connection from './connection';
 import { getShipConfig, buildConfigFromShip } from './config';
 import { EventEmitter } from 'events';
 import jsforce from 'jsforce';
@@ -73,9 +74,8 @@ export class Agent extends EventEmitter {
     let connect = new Promise((resolve, reject)=> {
       // Salesforce
       let { login, password, loginUrl } = this.config.salesforce;
-      var conn = new jsforce.Connection({ loginUrl : loginUrl });
-
-
+      var conn = new Connection({ loginUrl : loginUrl });
+      conn.setShipId(this.config.hull.id);
       if (login && password) {
         conn.login(login, password, (err, userInfo)=> {
           if (err) {

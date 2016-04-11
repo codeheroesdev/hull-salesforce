@@ -3,8 +3,24 @@ import { Agent } from './agent';
 import path from 'path';
 import { NotifHandler } from 'hull';
 import bodyParser from 'body-parser';
+import librato from 'librato-node';
 
 export function Server(config) {
+
+  if (process.env.LIBRATO_TOKEN && process.env.LIBRATO_USER) {
+    librato.configure({
+      email: process.env.LIBRATO_USER,
+      token: process.env.LIBRATO_TOKEN
+    });
+    librato.on('error', function(err) {
+      console.error(err);
+    });
+
+    process.once('SIGINT', function() {
+      librato.stop(); // stop optionally takes a callback
+    });
+    librato.start();
+  }
 
 
   const notifHandler = NotifHandler({
@@ -14,9 +30,10 @@ export function Server(config) {
     events: {
       'user_report:update' : function({ message }, { ship, hull }) {
         try {
+          librato.increment('user_report:update', 1, { source: ship.id })
           Agent.syncUsers(hull, ship, [ message ]);
         } catch(err) {
-          console.warn("Error in Users sync", err);
+          console.warn("Error in Users sync", err, err.stack);
           return err;
         }
 

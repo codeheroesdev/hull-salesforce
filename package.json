@@ -50,6 +50,7 @@
     "hogan.js": "^3.0.2",
     "hull": "0.6.2",
     "jsforce": "^1.4.1",
+    "librato-node": "4.1.0",
     "lodash": "^3.10.0",
     "minimist": "^1.1.2"
   },
