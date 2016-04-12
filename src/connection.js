@@ -35,6 +35,8 @@ export default class Connection extends jsforce.Connection {
       if (this.limitInfo && this.limitInfo.apiUsage) {
         measure('salesforce:used', this.limitInfo.apiUsage.used, { source: this._shipId });
       }
+    }, (res) => {
+      increment('salesforce:errors', 1, { source: this._shipId });
     });
     return ret;
   }
