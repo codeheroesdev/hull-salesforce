@@ -52,7 +52,8 @@
     "jsforce": "^1.4.1",
     "librato-node": "4.1.0",
     "lodash": "^3.10.0",
-    "minimist": "^1.1.2"
+    "minimist": "^1.1.2",
+    "newrelic": "^1.26.2"
   },
   "devDependencies": {
     "merge-stream": "^1.0.0",
