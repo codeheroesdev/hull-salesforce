@@ -1,8 +1,9 @@
 {
-  "name" : "Hull Salesforce",
-  "version" : "0.1.1",
-  "description" : "Hull <> Salesforce sync",
+  "name" : "Salesforce",
+  "tags": ["outgoing"],
+  "description" : "Send Users as Leads or Contacts to Salesforce with custom mappings",
   "readme" : "readme.md",
+  "version" : "0.1.1",
   "picture": "picture.png",
   "ui": false,
   "settings" : [],
