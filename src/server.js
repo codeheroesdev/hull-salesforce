@@ -30,8 +30,10 @@ export function Server(config) {
     events: {
       'user_report:update' : function({ message }, { ship, hull }) {
         try {
-          librato.increment('user_report:update', 1, { source: ship.id })
           Agent.syncUsers(hull, ship, [ message ]);
+          if (process.env.LIBRATO_TOKEN && process.env.LIBRATO_USER) {
+            librato.increment('user_report:update', 1, { source: ship.id });
+          }
         } catch(err) {
           console.warn("Error in Users sync", err, err.stack);
           return err;
