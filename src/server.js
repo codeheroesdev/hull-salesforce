@@ -24,6 +24,7 @@ export function Server(config) {
 
 
   const notifHandler = NotifHandler({
+    groupTraits: false,
     onError: function(message, status) {
       console.warn("Error", status, message);
     },
