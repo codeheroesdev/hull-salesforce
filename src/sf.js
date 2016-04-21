@@ -20,7 +20,7 @@ export class SF {
 
   upsert(type, data, key='Email') {
     const SObject = this.connection.sobject(type);
-    log('upsert', JSON.stringify({type, data});
+    log('upsert', JSON.stringify({type, data}));
     return new Promise((resolve, reject)=> {
       return SObject.upsert(data, key, (err, res)=> {
         log('upsert result', JSON.stringify({ err, res }));
