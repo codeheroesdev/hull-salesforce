@@ -23,8 +23,12 @@ export class SF {
     log('upsert', JSON.stringify({type, data}));
     return new Promise((resolve, reject)=> {
       return SObject.upsert(data, key, (err, res)=> {
-        log('upsert result', JSON.stringify({ err, res }));
-        return err ? reject(err) : resolve(res);
+        if (err) {
+          log('upsert error', JSON.stringify({ err, res, key, data }));
+          reject(err);
+        } else {
+          resolve(res);
+        }
       });
     });
   }
