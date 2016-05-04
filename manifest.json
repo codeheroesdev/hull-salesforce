@@ -1,6 +1,6 @@
 {
   "name" : "Salesforce",
-  "tags": ["outgoing"],
+  "tags": ["outgoing","wideSettings"],
   "description" : "Send Users as Leads or Contacts to Salesforce with custom mappings",
   "readme" : "readme.md",
   "version" : "0.1.1",
@@ -46,6 +46,7 @@
         "properties" : {
           "hull_field_name" : {
             "type" : "string",
+            "format" : "trait",
             "title" : "Hull Field"
           },
           "salesforce_field_name" : {
@@ -54,7 +55,7 @@
           },
           "overwrite" : {
             "type" : "boolean",
-            "title" : "Data from Hull overwrites data on Salesforce",
+            "title" : "Hull overwrites Salesforce",
             "default" : false
           },
           "default_value" : {
@@ -86,6 +87,7 @@
         "properties" : {
           "hull_field_name" : {
             "type" : "string",
+            "format" : "trait",
             "title" : "Hull Field"
           },
           "salesforce_field_name" : {
@@ -94,7 +96,7 @@
           },
           "overwrite" : {
             "type" : "boolean",
-            "title" : "Data from Hull overwrites data on Salesforce",
+            "title" : "Hull overwrites Salesforce",
             "default" : false
           },
           "default_value" : {
