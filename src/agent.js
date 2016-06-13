@@ -135,7 +135,7 @@ export class Agent extends EventEmitter {
       })));
 
       const changedKeys = users.reduce((keys, user) => {
-        const changes = Object.keys(user.changes.user || {});
+        const changes = Object.keys((user.changes || {}).user || {});
         return _.uniq(keys.concat(changes))
       }, []);
 
