@@ -13,24 +13,7 @@ function log(a,b,c) {
   }
 }
 
-function fetchQuery(sync) {
-  // TODO add support for segmentId filtering
-  return {
-    filtered: {
-      query: { match_all: {} },
-      filter: {
-        and: {
-          filters: [
-            { range: { last_seen_at: { gt: "now-" + (sync.fetchRange || '1h') } } },
-            { exists: { field: 'email' } }
-          ]
-        }
-      }
-    }
-  }
-};
-
-export class Agent extends EventEmitter {
+export default class Agent extends EventEmitter {
 
   static sync(config) {
     return new Agent(config).sync();
@@ -47,13 +30,15 @@ export class Agent extends EventEmitter {
     const config = buildConfigFromShip(ship, organization, secret);
     const agent = new Agent(config);
     const matchingUsers = agent.getUsersMatchingSegment(users);
+    let result = Promise.resolve({});
     if (matchingUsers.length > 0) {
       if (agent.shouldSync(matchingUsers, ship)) {
-        return agent.connect().then(() => {
+        result = agent.connect().then(() => {
           return agent.syncUsers(matchingUsers.map(u => u.user));
         });
       }
     }
+    return result;
   }
 
   constructor(config={}) {
@@ -160,51 +145,10 @@ export class Agent extends EventEmitter {
     });
   }
 
-  startSync() {
-    if (this._result) return this._result;
-    this._result = new Promise((resolve, reject) => {
-      var stats = { fetched: 0, updated: { total: 0 }, pages: 0 };
-      this.on('data', (res)=> {
-        stats.pages = res.page;
-        stats.fetched += res.data.length;
-        Object.keys(res.records).map((k) => {
-          stats.updated[k] = stats.updated[k] || 0;
-          stats.updated.total += (res.records[k].records || []).length
-          stats.updated[k] += (res.records[k].records || []).length
-        })
-        if (res.page < res.pagination.pages) {
-          let nextPage = res.page + 1;
-          this.syncPage(nextPage).catch(reject);
-          this.status = 'sync';
-        } else {
-          this.status = 'finished';
-          this.emit('end', stats);
-          resolve(stats);
-        }
-      });
-      this.syncPage(1).catch(reject);
-    });
-
-    this._result.catch((err) => {
-      this.emit('error', err)
-    })
-    return this._result;
-  }
-
-  fetchPage(pageNum) {
-    let query = fetchQuery(this.config.sync);
-
-    let per_page = this.config.per_page || 100;
-    let params = { raw: true, page: pageNum, per_page, query };
-
-    return this.hull.post('search/user_reports', params);
-  }
-
   syncUsers(users) {
     const mappings = this.config.mappings;
     let emails = users.map((u)=> u.email);
     let sfRecords = this.sf.searchEmails(emails, mappings);
-
     return sfRecords.then((searchResults)=> {
       let recordsByType = syncRecords(searchResults, users, { mappings });
 
@@ -225,30 +169,6 @@ export class Agent extends EventEmitter {
           return rr
         }, {});
       });
-
     });
   }
-
-  syncPage(pageNum) {
-    let mappings = this.config.mappings;
-    let page = this.pages[pageNum];
-    if (!page) {
-      page = this.pages[pageNum] = new Promise((resolve, reject) => {
-        this.fetchPage(pageNum).then((users)=> {
-          this.emit('fetch', users);
-          this.syncUsers(users.data, mappings).then((records)=> {
-            const result = {
-              page: pageNum,
-              ...users,
-              records: records
-            }
-            this.emit('data', result);
-            resolve(result);
-          }, reject);
-        }, reject);
-      })
-    }
-    return page;
-  }
-
 }

@@ -18,13 +18,38 @@ export class SF {
     this.connection = connection;
   }
 
-  upsert(type, data, key='Email') {
-    const SObject = this.connection.sobject(type);
-    log('upsert', JSON.stringify({type, data}));
+  upsert(type, input, externalIDFieldName='Email') {
+    return input.length > 10 ?
+      this._upsertBulk(type, input, externalIDFieldName) :
+      this._upsertSoap(type, input, externalIDFieldName);
+  }
+
+  _upsertSoap(type, input, externalIDFieldName='Email') {
     return new Promise((resolve, reject)=> {
-      return SObject.upsert(data, key, (err, res)=> {
+      const message = {
+        externalIDFieldName,
+        sObjects: input.map(o => {
+          return { type, ...o }
+        })
+      };
+      return this.connection.soap._invoke('upsert', message, false, (err, res) => {
         if (err) {
-          log('upsert error', JSON.stringify({ err, res, key, data }));
+          log('upsert error', JSON.stringify({ err, res, key, input }));
+          reject(err);
+        } else {
+          resolve(res);
+        }
+      });
+    });
+  }
+
+  _upsertBulk(type, input, extIdField='Email') {
+    const SObject = this.connection.sobject(type);
+    log('upsert', JSON.stringify({ type, input }));
+    return new Promise((resolve, reject)=> {
+      return SObject.upsertBulk(input, extIdField, (err, res)=> {
+        if (err) {
+          console.log('upsert error', JSON.stringify({ err, res, extIdField, input }));
           reject(err);
         } else {
           resolve(res);
@@ -64,8 +89,8 @@ export class SF {
 
     let qry = this.searchEmailsQuery(emails, mappings);
 
-    let ret = this.exec('search', qry).then((res) => {
-      return res.reduce((m,o) => {
+    let ret = this.exec('search', qry).then(({ searchRecords = [] }) => {
+      return searchRecords.reduce((m,o) => {
         m[o.Email] = m[o.Email] || {};
         m[o.Email][o.attributes.type] = o;
         return m;
