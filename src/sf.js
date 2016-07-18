@@ -1,4 +1,5 @@
-import { uniq } from 'lodash';
+import _ from 'lodash';
+import Promise from 'bluebird';
 
 const RESERVED_CHARACTERS_REGEXP = /\?|\&|\||\!|\{|\}|\[|\]|\(|\)|\^|\~|\*|\:|\+|\-|\"|\'/ig;
 
@@ -43,9 +44,9 @@ export class SF {
     });
   }
 
-  _upsertBulk(type, input, extIdField='Email') {
+  _upsertBulk(type, input = [], extIdField='Email') {
     const SObject = this.connection.sobject(type);
-    log('upsert', JSON.stringify({ type, input }));
+    log('upsert', JSON.stringify({ type, records: input.length }));
     return new Promise((resolve, reject)=> {
       return SObject.upsertBulk(input, extIdField, (err, res)=> {
         if (err) {
@@ -65,7 +66,7 @@ export class SF {
     }, []);
 
     let Returning = Object.keys(mappings).reduce((ret,type)=> {
-      let fieldsList = uniq(['Id'].concat(Object.keys(mappings[type].fields || {})));
+      let fieldsList = _.uniq(['Id'].concat(Object.keys(mappings[type].fields || {})));
       ret.push(`${type}(${fieldsList.join(',')})`)
       return ret;
     }, []);
@@ -83,20 +84,30 @@ export class SF {
     });
   }
 
-  searchEmails(emails, mappings) {
-
+  searchEmails(emails = [], mappings) {
+    console.warn('searchEmails: ', emails.length)
     if (emails.length === 0) return Promise.resolve({});
 
-    let qry = this.searchEmailsQuery(emails, mappings);
+    const chunks = _.chunk(emails, 200);
+    const searches = chunks.map(
+      chunk => this.exec('search', this.searchEmailsQuery(chunk, mappings))
+    );
 
-    let ret = this.exec('search', qry).then(({ searchRecords = [] }) => {
-      return searchRecords.reduce((m,o) => {
-        m[o.Email] = m[o.Email] || {};
-        m[o.Email][o.attributes.type] = o;
-        return m;
+
+    return Promise.all(searches).then(results => {
+      const boom = results.reduce((recs, { searchRecords = [] }) => {
+        console.warn("Search records - ", searchRecords.length);
+        searchRecords.map(o => {
+          console.warn(`--> ${o.Email}/${o.attributes.type}: ${JSON.stringify(o)}`);
+          recs[o.Email] = recs[o.Email] || {};
+          recs[o.Email][o.attributes.type] = o;
+        })
+        return recs;
       }, {});
+
+      console.warn('booom', boom);
+      return boom;
     });
 
-    return ret;
   }
 }
