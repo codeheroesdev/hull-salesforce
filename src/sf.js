@@ -85,7 +85,6 @@ export class SF {
   }
 
   searchEmails(emails = [], mappings) {
-    console.warn('searchEmails: ', emails.length)
     if (emails.length === 0) return Promise.resolve({});
 
     const chunks = _.chunk(emails, 200);
@@ -93,10 +92,8 @@ export class SF {
       chunk => this.exec('search', this.searchEmailsQuery(chunk, mappings))
     );
 
-
     return Promise.all(searches).then(results => {
       const boom = results.reduce((recs, { searchRecords = [] }) => {
-        console.warn("Search records - ", searchRecords.length);
         searchRecords.map(o => {
           console.warn(`--> ${o.Email}/${o.attributes.type}: ${JSON.stringify(o)}`);
           recs[o.Email] = recs[o.Email] || {};
