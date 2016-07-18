@@ -48,7 +48,7 @@
     "body-parser": "^1.14.2",
     "express": "^4.13.1",
     "hogan.js": "^3.0.2",
-    "hull": "0.8.0",
+    "hull": "0.9.1",
     "jsforce": "1.7.0",
     "librato-node": "4.1.0",
     "lodash": "^3.10.0",

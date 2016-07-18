@@ -51,6 +51,7 @@ export function Server(config) {
   }));
 
   app.post('/batch', BatchHandler({
+    batchSize: 2000,
     groupTraits: false,
     handler: (notifications = [], { ship, hull }) => {
       const users = notifications.map(n => n.message);
