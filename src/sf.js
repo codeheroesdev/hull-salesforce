@@ -87,7 +87,7 @@ export class SF {
   searchEmails(emails = [], mappings) {
     if (emails.length === 0) return Promise.resolve({});
 
-    const chunks = _.chunk(emails, 200);
+    const chunks = _.chunk(emails, 100);
     const searches = chunks.map(
       chunk => this.exec('search', this.searchEmailsQuery(chunk, mappings))
     );
