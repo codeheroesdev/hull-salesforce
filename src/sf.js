@@ -93,17 +93,13 @@ export class SF {
     );
 
     return Promise.all(searches).then(results => {
-      const boom = results.reduce((recs, { searchRecords = [] }) => {
+      return results.reduce((recs, { searchRecords = [] }) => {
         searchRecords.map(o => {
-          console.warn(`--> ${o.Email}/${o.attributes.type}: ${JSON.stringify(o)}`);
           recs[o.Email] = recs[o.Email] || {};
           recs[o.Email][o.attributes.type] = o;
         })
         return recs;
       }, {});
-
-      console.warn('booom', boom);
-      return boom;
     });
 
   }
