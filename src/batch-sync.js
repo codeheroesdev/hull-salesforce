@@ -41,8 +41,8 @@ export default class BatchSyncHandler {
       throttle: BATCH_THROTTLE,
       ...options
     };
-    this.metric = (metric, value) => {
-      this.hull.utils.metric(`bulk.${metric}`, value);
+    this.metric = (metric, value = 1) => {
+      console.warn('metric', `bulk.${metric}`, value);
     };
 
     this.log = this.hull.utils.log;
