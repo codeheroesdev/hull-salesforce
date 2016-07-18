@@ -45,7 +45,7 @@ export default class BatchSyncHandler {
       console.warn('metric', `bulk.${metric}`, value);
     };
 
-    this.log = this.hull.utils.log;
+    this.log = this.hull.logger.info;
     this.users = {};
     this.status = "idle";
     this.flushLater = _.throttle(this.flush.bind(this), this.options.throttle);
