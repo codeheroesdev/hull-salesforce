@@ -34,7 +34,7 @@ export class SF {
       };
       return this.connection.soap._invoke('upsert', message, false, (err, res) => {
         if (err) {
-          log('upsert error', JSON.stringify({ err, res, key, input }));
+          log('upsert error', JSON.stringify({ err, res, externalIDFieldName, input }));
           reject(err);
         } else {
           resolve(res);
