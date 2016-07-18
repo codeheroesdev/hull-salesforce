@@ -25,11 +25,15 @@
       "default" : "https://login.salesforce.com"
     },
     {
-      "name": "segment_id",
-      "type": "string",
-      "title": "Segment ID to sync",
-      "description" : "Select a segment to sync with Salesforce. No value syncs everyone",
-      "format" : "segment"
+      "name": "synchronized_segments",
+      "title": "Filter users",
+      "description": "Only send Users matching one or more of these segments. Sends everyone if empty.",
+      "type": "array",
+      "format": "segment",
+      "items": {
+        "type": "string"
+      },
+      "default": []
     },
     {
       "name" : "leads_mapping",

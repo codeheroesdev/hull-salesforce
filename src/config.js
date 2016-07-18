@@ -77,7 +77,7 @@ export function buildConfigFromShip(ship, organization, secret) {
     salesforce_login,
     salesforce_password,
     salesforce_login_url,
-    segment_id
+    synchronized_segments
   } = ship.private_settings;
 
   const mappings = ['Lead', 'Contact'].reduce((maps, type) => {
@@ -111,9 +111,9 @@ export function buildConfigFromShip(ship, organization, secret) {
       loginUrl: salesforce_login_url || 'https://login.salesforce.com'
     },
     sync: {
-      segmentId: segment_id,
+      segmentIds: synchronized_segments || [],
       fetchRange: '3d',
-      batchSize: 100
+      batchSize: 200
     },
     mappings
   }

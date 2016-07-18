@@ -15,29 +15,20 @@ function log(a,b,c) {
 
 export default class Agent extends EventEmitter {
 
-  static sync(config) {
-    return new Agent(config).sync();
-  }
-
-  static syncShip(organization, id, secret) {
-    return getShipConfig(organization, id, secret).then(config => {
-      return new Agent(config).sync();
-    });
-  }
-
-  static syncUsers(hull, ship, users) {
+  static syncUsers(hull, ship, users, options = {}) {
+    const { applyFilters = true } = options;
     const { organization, secret } = hull.configuration();
     const config = buildConfigFromShip(ship, organization, secret);
     const agent = new Agent(config);
-    const matchingUsers = agent.getUsersMatchingSegment(users);
+    const matchingUsers = applyFilters ? agent.getUsersMatchingSegments(users) : users;
+
     let result = Promise.resolve({});
     if (matchingUsers.length > 0) {
-      if (agent.shouldSync(matchingUsers, ship)) {
-        result = agent.connect().then(() => {
-          return agent.syncUsers(matchingUsers.map(u => u.user));
-        });
-      }
+      result = agent.connect().then(() => {
+        return agent.syncUsers(matchingUsers.map(u => u.user));
+      });
     }
+
     return result;
   }
 
@@ -91,57 +82,14 @@ export default class Agent extends EventEmitter {
     return connect;
   }
 
-  getUsersMatchingSegment(users) {
-    const { segmentId } = this.config.sync || {};
-    if (!segmentId) return users;
-    return users.filter((user) => {
-      const ids = (user.segments || []).map(s => s.id);
-      return ids.includes(segmentId);
-    });
-  }
-
-  shouldSync(users, ship) {
-    try {
-      const { leads_mapping, contacts_mapping } = ship.private_settings || {};
-
-      const mappings = [].concat(leads_mapping || {}).concat(contacts_mapping);
-      const mappedKeys = _.uniq(_.compact(mappings.map(m => {
-        const { hull_field_name } = m;
-        if (hull_field_name && hull_field_name.length) {
-          return hull_field_name;
-        }
-      })));
-
-      const templates = _.uniq(_.compact(mappings.map(m => {
-        const { tpl } = m;
-        if (tpl && tpl.length) {
-          return tpl;
-        }
-      })));
-
-      const changedKeys = users.reduce((keys, user) => {
-        const changes = Object.keys((user.changes || {}).user || {});
-        return _.uniq(keys.concat(changes))
-      }, []);
-
-      const changed = _.intersection(changedKeys, mappedKeys).length > 0;
-      const templated = _.some(templates,  tpl => {
-        return _.some(changedKeys, k => tpl.includes(k))
-      }, false);
-
-      return changed || templated;
-    } catch (err) {
-      console.warn('Error in shouldSync', err);
-      return false;
+  getUsersMatchingSegments(users) {
+    const { segmentIds } = this.config.sync || {};
+    if (_.isEmpty(segmentIds)) {
+      return users;
     }
-  }
-
-  sync() {
-    return this.connect().then(()=> {
-      return this.startSync();
-    }, (err)=> {
-      this.emit('error', err);
-      return err;
+    return users.filter(user => {
+      const ids = (user.segments || []).map(s => s.id);
+      return _.intersection(ids, segmentIds).length > 0;
     });
   }
 

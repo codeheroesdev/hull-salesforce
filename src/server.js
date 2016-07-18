@@ -53,8 +53,9 @@ export function Server(config) {
   app.post('/batch', BatchHandler({
     groupTraits: false,
     handler: (notifications = [], { ship, hull }) => {
+      const users = notifications.map(n => n.message);
       return Agent
-        .syncUsers(hull, ship, notifications.map(n => n.message))
+        .syncUsers(hull, ship, users, { applyFilters: false })
         .then(ok => console.warn('batch done', ok))
         .catch(err => console.warn('batch err', err));
     }
