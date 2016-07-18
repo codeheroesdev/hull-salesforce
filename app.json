@@ -1,21 +1,9 @@
 {
-  "name": "Hull Salesforce Sync",
-  "description": "A Hull Addon for Salesforce Sync.",
-  "repository": "https://github.com/sbellity/hullforce",
+  "name": "Hull Salesforce",
+  "description": "A Hull Ship for Salesforce Sync.",
+  "repository": "https://github.com/hull-ships/hull-salesforce",
   "website": "http://www.hull.io",
   "success_url": "/",
-  "addons": ["scheduler:standard"],
-  "env": {
-    "HULL_ORG_URL" : {
-      "description" : "Hull Organization URL"
-    },
-    "HULL_SHIP_ID" : {
-      "description" : "Hull default Ship ID"
-    },
-    "SECRET" : {
-      "description" : "A Secret key used to authenticate on Hull API",
-      "generator" : "secret"
-    }
-  },
+  "env": {},
   "scripts": {}
 }

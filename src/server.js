@@ -1,7 +1,8 @@
 import express from 'express';
-import { Agent } from './agent';
+import BatchSyncHandler from './batch-sync';
+import Agent from './agent';
 import path from 'path';
-import { NotifHandler } from 'hull';
+import { NotifHandler, BatchHandler } from 'hull';
 import bodyParser from 'body-parser';
 import librato from 'librato-node';
 
@@ -22,16 +23,22 @@ export function Server(config) {
     librato.start();
   }
 
+  const app = express();
 
-  const notifHandler = NotifHandler({
+  app.use(express.static(path.resolve(__dirname, '..', 'assets')));
+
+  app.post('/notify', NotifHandler({
     groupTraits: false,
-    onError: function(message, status) {
+    onSusbscribe(message, context) {
+      console.warn("Hello new subscriber !", { message, context });
+    },
+    onError(message, status) {
       console.warn("Error", status, message);
     },
-    events: {
-      'user_report:update' : function({ message }, { ship, hull }) {
+    handlers: {
+      'user:update' : function({ message }, { ship, hull }) {
         try {
-          Agent.syncUsers(hull, ship, [ message ]);
+          BatchSyncHandler.handle(message, { ship, hull });
           if (process.env.LIBRATO_TOKEN && process.env.LIBRATO_USER) {
             librato.increment('user_report:update', 1, { source: ship.id });
           }
@@ -39,71 +46,27 @@ export function Server(config) {
           console.warn("Error in Users sync", err, err.stack);
           return err;
         }
-
       }
     }
-  });
+  }));
 
-  const syncing = {};
-  const app = express();
-
-  function syncDone(shipId) {
-    setTimeout(()=> {
-      syncing[shipId] = false;
-    }, 3000);
-  }
-
-  function isSyncing(shipId) {
-    return !!syncing[shipId];
-  }
-
-  app.use(express.static(path.resolve(__dirname, '..', 'dist')));
-  app.use(express.static(path.resolve(__dirname, '..', 'assets')));
-
-  app.use(bodyParser.urlencoded({ extended: false }));
-  app.use(bodyParser.json());
-
-  app.post('/notify', notifHandler);
-
-  app.post('/sync', (req, res)=> {
-
-    res.type('application/json');
-
-    const orgUrl = req.body.organization || req.body.orgUrl || process.env.HULL_ORG_URL;
-    const shipId = req.body.ship || req.body.shipId || process.env.HULL_SHIP_ID;
-    const secret = req.body.secret || process.env.SECRET;
-
-    if (!orgUrl || !shipId) {
-      return res.status(400).end(JSON.stringify({ status: 400, error: "Missing orgUrl and shipId"  }));
+  app.post('/batch', BatchHandler({
+    groupTraits: false,
+    handler: (notifications = [], { ship, hull }) => {
+      return Agent
+        .syncUsers(hull, ship, notifications.map(n => n.message))
+        .then(ok => console.warn('batch done', ok))
+        .catch(err => console.warn('batch err', err));
     }
-
-    if (!isSyncing(shipId)) {
-      const sync = syncing[shipId] = Agent.syncShip(orgUrl, shipId, secret);
-
-      sync.then(function(response) {
-        res.status(200)
-        res.end(JSON.stringify({ response: response, shipId: shipId, orgUrl: orgUrl }));
-        syncDone(shipId);
-      }, function(err) {
-        res.status(401)
-        res.end(JSON.stringify({ status: 401, error: err.toString() }));
-        syncDone(shipId);
-      });
-
-      sync.catch(function(err) {
-        res.status(401)
-        res.end(JSON.stringify({ status: 500, error: err.toString() }));
-        syncDone(shipId);
-      })
-    } else {
-      res.status(429).end(JSON.stringify({ status: 429, error: 'Too many requests' }));
-    }
-  });
+  }));
 
   app.get('/manifest.json', (req, res) => {
     res.sendFile(path.resolve(__dirname, '..', 'manifest.json'));
   });
 
-  return app;
+  return {
+    listen: (port) => app.listen(port),
+    exit: ()=> BatchSyncHandler.exit()
+  };
 
 }

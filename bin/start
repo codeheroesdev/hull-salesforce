@@ -12,4 +12,20 @@ if (process.env.NEW_RELIC_LICENSE_KEY) {
 }
 
 console.warn("Starting on PORT " + PORT);
-Server(config).listen(PORT);
+const server = Server(config);
+server.listen(PORT);
+
+function exitNow() {
+  console.warn("Exiting now !");
+  process.exit();
+}
+
+function handleExit() {
+  console.log("Exiting... waiting 30 seconds workers to flush");
+  setTimeout(exitNow, 30000);
+  server.exit().then(exitNow);
+}
+
+process.on("SIGINT", handleExit);
+process.on("SIGTERM", handleExit);
+
