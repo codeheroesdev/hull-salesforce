@@ -45,7 +45,6 @@ export default class BatchSyncHandler {
       console.warn('metric', `bulk.${metric}`, value);
     };
 
-    this.log = this.hull.logger.info;
     this.users = {};
     this.status = "idle";
     this.flushLater = _.throttle(this.flush.bind(this), this.options.throttle);
@@ -54,7 +53,11 @@ export default class BatchSyncHandler {
   }
 
   debugStats() {
-    this.log('batch.stats', JSON.stringify(this.stats));
+    this.log('batch.stats', this.stats);
+  }
+
+  log(msg, data) {
+    console.log(msg, JSON.stringify(data));
   }
 
   add(message, { hull, ship }) {
