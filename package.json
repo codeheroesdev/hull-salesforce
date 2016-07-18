@@ -44,6 +44,7 @@
   "homepage": "https://github.com/hull-ships/hullforce",
   "dependencies": {
     "babel": "^5.8.3",
+    "bluebird": "^3.4.1",
     "body-parser": "^1.14.2",
     "express": "^4.13.1",
     "hogan.js": "^3.0.2",
