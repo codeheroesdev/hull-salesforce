@@ -6,7 +6,7 @@ import { NotifHandler, BatchHandler } from 'hull';
 import bodyParser from 'body-parser';
 import librato from 'librato-node';
 
-export function Server(config) {
+export function Server({ hostSecret }) {
 
   if (process.env.LIBRATO_TOKEN && process.env.LIBRATO_USER) {
     librato.configure({
@@ -28,6 +28,7 @@ export function Server(config) {
   app.use(express.static(path.resolve(__dirname, '..', 'assets')));
 
   app.post('/notify', NotifHandler({
+    hostSecret,
     groupTraits: false,
     onSusbscribe(message, context) {
       console.warn("Hello new subscriber !", { message, context });
@@ -51,6 +52,7 @@ export function Server(config) {
   }));
 
   app.post('/batch', BatchHandler({
+    hostSecret,
     batchSize: 2000,
     groupTraits: false,
     handler: (notifications = [], { ship, hull }) => {
