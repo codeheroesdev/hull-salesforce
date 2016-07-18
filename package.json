@@ -1,5 +1,5 @@
 {
-  "name": "hullforce",
+  "name": "hull-salesforce",
   "version": "0.0.2",
   "description": "Hull Salesforce integration",
   "main": "index.js",
@@ -29,7 +29,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/hull-ships/hullforce.git"
+    "url": "https://github.com/hull-ships/hull-salesforce.git"
   },
   "keywords": [
     "hull",
@@ -39,9 +39,9 @@
   "author": "Hull",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/hull-ships/hullforce/issues"
+    "url": "https://github.com/hull-ships/hull-salesforce/issues"
   },
-  "homepage": "https://github.com/hull-ships/hullforce",
+  "homepage": "https://github.com/hull-ships/hull-salesforce",
   "dependencies": {
     "babel": "^5.8.3",
     "bluebird": "^3.4.1",

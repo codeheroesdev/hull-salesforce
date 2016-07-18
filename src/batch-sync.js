@@ -50,11 +50,11 @@ export default class BatchSyncHandler {
     this.status = "idle";
     this.flushLater = _.throttle(this.flush.bind(this), this.options.throttle);
     this.stats = { flush: 0, add: 0, flushing: 0, success: 0, error: 0, pending: 0 };
-    setInterval(this.debugStats.bind(this), 1000);
+    setInterval(this.debugStats.bind(this), 10000);
   }
 
   debugStats() {
-    console.warn(`BatchSyncHandler ${this.ship.id}`, this.stats);
+    this.log('batch.stats', JSON.stringify(this.stats));
   }
 
   add(message, { hull, ship }) {
