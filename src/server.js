@@ -59,7 +59,7 @@ export function Server({ hostSecret }) {
       const users = notifications.map(n => n.message);
       return Agent
         .syncUsers(hull, ship, users, { applyFilters: false })
-        .then(ok => console.warn('batch done'))
+        .then(ok => console.warn('batch done', ok))
         .catch(err => console.warn('batch err', err));
     }
   }));
