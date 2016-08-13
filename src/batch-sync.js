@@ -2,7 +2,7 @@ import _ from "lodash";
 import Promise from "bluebird";
 import Agent from "./agent";
 
-const MAX_BATCH_SIZE = parseInt(process.env.MAX_BATCH_SIZE || 200, 10);
+const MAX_BATCH_SIZE = parseInt(process.env.MAX_BATCH_SIZE || 99, 10);
 const BATCH_THROTTLE = parseInt(process.env.BATCH_THROTTLE || 30000, 10);
 const HANDLERS = {};
 

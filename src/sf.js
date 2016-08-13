@@ -20,7 +20,7 @@ export class SF {
   }
 
   upsert(type, input, externalIDFieldName='Email') {
-    return input.length > 200 ?
+    return input.length > 99 ?
       this._upsertBulk(type, input, externalIDFieldName) :
       this._upsertSoap(type, input, externalIDFieldName);
   }
