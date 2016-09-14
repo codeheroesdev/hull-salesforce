@@ -7,7 +7,6 @@ var Server = require('./server').Server;
 var config = require('./config').config(process.env);
 var PORT = process.env.PORT || 8082;
 
-
 console.warn("Starting on PORT " + PORT);
 const server = Server(config);
 server.listen(PORT);

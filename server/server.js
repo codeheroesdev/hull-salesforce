@@ -3,9 +3,20 @@ import cors from 'cors';
 import BatchSyncHandler from './batch-sync';
 import Agent from './agent';
 import path from 'path';
-import { NotifHandler, BatchHandler, Middleware } from 'hull';
+import { NotifHandler, BatchHandler, Middleware, OAuthHandler } from 'hull';
+import { Strategy } from 'passport-forcedotcom';
 import bodyParser from 'body-parser';
 import librato from 'librato-node';
+import { renderFile } from 'ejs';
+
+function save(hull, ship, settings) {
+ return hull.put(ship.id, {
+   private_settings: {
+     ...ship.private_settings,
+     ...settings
+   }
+ });
+}
 
 
 export function Server({ hostSecret }) {
@@ -27,7 +38,50 @@ export function Server({ hostSecret }) {
 
   const app = express();
 
-  app.use(express.static(path.resolve(__dirname, '..', 'assets')));
+  app.set("views", `${__dirname}/../views`);
+  app.set("view engine", "ejs");
+  app.engine("html", renderFile);
+  app.use(express.static(path.resolve(__dirname, "..", "dist")));
+  app.use(express.static(path.resolve(__dirname, "..", "assets")));
+
+  app.use("/auth", OAuthHandler({
+    hostSecret,
+    name: "Salesforce",
+    Strategy,
+    options: {
+      clientID: process.env.CLIENT_ID,
+      clientSecret: process.env.CLIENT_SECRET, //Client Secret
+      scope: ["refresh_token", "api"] //App Scope
+    },
+    isSetup(req, { /* hull,*/ ship }) {
+      if (!!req.query.reset) return Promise.reject();
+      const { token } = ship.private_settings || {};
+      return (!!token) ? Promise.resolve() : Promise.reject();
+    },
+    onLogin: (req, { hull, ship }) => {
+      req.authParams = { ...req.body, ...req.query };
+      return save(hull, ship, {
+        portalId: req.authParams.portalId
+      });
+    },
+    onAuthorize: (req, { hull, ship }) => {
+
+      console.warn("\n\n\n\n============ onAuthorize ================")
+      console.warn({ account: req.account });
+
+      const { refreshToken, accessToken } = (req.account || {});
+      return save(hull, ship, {
+        refresh_token: refreshToken,
+        token: accessToken
+      });
+    },
+    views: {
+      login: "login.html",
+      home: "home.html",
+      failure: "failure.html",
+      success: "success.html"
+    },
+  }));
 
   app.post('/sync', Middleware({ hostSecret }), (req, res) => {
     const { client: hull, ship } = req.hull;

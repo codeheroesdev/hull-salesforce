@@ -3,6 +3,7 @@
   "tags": ["outgoing","oneColumn", "batch"],
   "description" : "Send Users as Leads or Contacts to Salesforce with custom mappings",
   "readme" : "readme.md",
+  "admin" : "/auth",
   "version" : "0.2.0",
   "picture": "picture.png",
   "ui": false,
@@ -16,6 +17,11 @@
   "private_settings" : [
     {
       "name": "salesforce_login",
+      "type": "string",
+      "required" : true
+    },
+    {
+      "name": "token",
       "type": "string",
       "required" : true
     },

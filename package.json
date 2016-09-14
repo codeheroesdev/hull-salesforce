@@ -65,6 +65,7 @@
     "lodash": "^4.16.6",
     "newrelic": "^1.33.0",
     "nf": "^0.0.3",
+    "passport-forcedotcom": "^0.1.4",
     "rimraf": "^2.5.4"
   },
   "devDependencies": {
