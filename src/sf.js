@@ -1,6 +1,18 @@
 import _ from 'lodash';
 import Promise from 'bluebird';
 
+import librato from 'librato-node';
+
+function increment(metric, value, options) {
+  try {
+    if (librato.increment) {
+      librato.increment(metric, value, options);
+    }
+  } catch(err) {
+    console.warn('Librato error', err)
+  }
+}
+
 const RESERVED_CHARACTERS_REGEXP = /\?|\&|\||\!|\{|\}|\[|\]|\(|\)|\^|\~|\*|\:|\+|\-|\"|\'/ig;
 
 function escapeSOSL(str) {
@@ -38,7 +50,13 @@ export class SF {
           log('upsert error', JSON.stringify({ err, res, externalIDFieldName, input }));
           reject(err);
         } else {
-          log('upsert success', JSON.stringify({ err, res, externalIDFieldName, input }))
+          console.log('upsert success', JSON.stringify({ err, res, externalIDFieldName, input }));
+          res.map((r,idx) => {
+            increment('salesforce:errors', 1, { source: this.connection._shipId });
+            if (r.success !== 'true') {
+              console.log('upsert error', JSON.stringify({ res: r, input: input[idx] }));
+            }
+          });
           resolve(res);
         }
       });
