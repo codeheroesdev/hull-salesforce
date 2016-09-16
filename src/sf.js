@@ -51,7 +51,6 @@ export class SF {
           log('upsert error', JSON.stringify({ err, res, externalIDFieldName, input }));
           reject(err);
         } else {
-          console.log('upsert success', JSON.stringify({ err, res, externalIDFieldName, input }));
           if (_.isArray(res)) {
             res.map((r,idx) => {
               increment('salesforce:errors', 1, { source: this.connection._shipId });
