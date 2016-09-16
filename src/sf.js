@@ -47,16 +47,19 @@ export class SF {
       };
       return this.connection.soap._invoke('upsert', message, false, (err, res) => {
         if (err) {
+          increment('salesforce:errors', 1, { source: this.connection._shipId });
           log('upsert error', JSON.stringify({ err, res, externalIDFieldName, input }));
           reject(err);
         } else {
           console.log('upsert success', JSON.stringify({ err, res, externalIDFieldName, input }));
-          (res || []).map((r,idx) => {
-            increment('salesforce:errors', 1, { source: this.connection._shipId });
-            if (r.success !== 'true') {
-              console.log('upsert error', JSON.stringify({ res: r, input: input[idx] }));
-            }
-          });
+          if (_.isArray(res)) {
+            res.map((r,idx) => {
+              increment('salesforce:errors', 1, { source: this.connection._shipId });
+              if (r.success !== 'true') {
+                console.log('upsert error', JSON.stringify({ res: r, input: input[idx] }));
+              }
+            });
+          }
           resolve(res);
         }
       });
