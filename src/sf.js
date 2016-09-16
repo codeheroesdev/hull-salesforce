@@ -38,6 +38,7 @@ export class SF {
           log('upsert error', JSON.stringify({ err, res, externalIDFieldName, input }));
           reject(err);
         } else {
+          log('upsert success', JSON.stringify({ err, res, externalIDFieldName, input }))
           resolve(res);
         }
       });
@@ -53,6 +54,7 @@ export class SF {
           console.log('upsert error', JSON.stringify({ err, res, extIdField, input }));
           reject(err);
         } else {
+          console.log('upsert success', JSON.stringify({ err, res, extIdField, input }));
           resolve(res);
         }
       });
