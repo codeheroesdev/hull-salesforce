@@ -74,7 +74,14 @@ export class SF {
           console.log('upsert error', JSON.stringify({ err, res, extIdField, input }));
           reject(err);
         } else {
-          console.log('bulk.upsert.response', JSON.stringify({ err, res, extIdField, input }));
+          if (_.isArray(res)) {
+            res.map((r,idx) => {
+              increment('salesforce:errors', 1, { source: this.connection._shipId });
+              if (r.success.toString() !== 'true') {
+                console.log('bulk upsert error', JSON.stringify({ res: r, input: input[idx] }));
+              }
+            });
+          }
           resolve(res);
         }
       });
