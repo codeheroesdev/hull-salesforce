@@ -32,7 +32,7 @@ export class SF {
   }
 
   upsert(type, input, externalIDFieldName='Email') {
-    return input.length > 99 ?
+    return input.length > 10 ?
       this._upsertBulk(type, input, externalIDFieldName) :
       this._upsertSoap(type, input, externalIDFieldName);
   }
@@ -74,7 +74,7 @@ export class SF {
           console.log('upsert error', JSON.stringify({ err, res, extIdField, input }));
           reject(err);
         } else {
-          console.log('upsert success', JSON.stringify({ err, res, extIdField, input }));
+          console.log('bulk.upsert.response', JSON.stringify({ err, res, extIdField, input }));
           resolve(res);
         }
       });
