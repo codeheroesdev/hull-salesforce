@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "start": "./bin/start"
+    "start": "./bin/start",
+    "start:dev": "NODE_ENV=development ./node_modules/.bin/nodemon -V -w src ./bin/start"
   },
   "engines": {
     "node": "5.x",
