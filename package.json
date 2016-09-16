@@ -51,7 +51,7 @@
     "hull": "0.9.2",
     "jsforce": "1.7.0",
     "librato-node": "4.1.0",
-    "lodash": "^3.10.0",
+    "lodash": "^4.15.0",
     "minimist": "^1.1.2",
     "newrelic": "^1.26.2"
   },
