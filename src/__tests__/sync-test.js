@@ -10,7 +10,8 @@ let Mappings = {
       Email: 'email',
       Company: { key: 'traits_company', defaultValue: '[Unknown]' },
       City: { key: 'city', defaultValue: 'City of {{last_name}}', overwrite: true },
-      Foo: { tpl: 'Hello({{id}})' }
+      Foo: { tpl: 'Hello({{id}})' },
+      Zero: { key: 'zero' }
     }
   },
   Contact: {
@@ -23,7 +24,7 @@ let Mappings = {
   }
 }
 
-let User = { id: '123', email: 'bob@bob.com', first_name: 'Bob',         last_name: 'Dufion' };
+let User = { id: '123', email: 'bob@bob.com', first_name: 'Bob', last_name: 'Dufion', zero: 0 };
 let Lead = { Id: '456', Email: 'bob@bob.com', FirstName:  'Jean Michel', LastName: 'Dugommier', attributes: { type: 'Lead' } };
 
 describe('getUpdatedFields', ()=> {
@@ -35,7 +36,8 @@ describe('getUpdatedFields', ()=> {
       LastName: 'Dufion',
       Company: '[Unknown]',
       City: 'City of Dufion',
-      Foo: 'Hello(123)'
+      Foo: 'Hello(123)',
+      Zero: 0
     });
   })
 
@@ -51,9 +53,12 @@ describe('getUpdatedFields', ()=> {
       FirstName: 'Bob',
       LastName: 'Dufion',
       Company: '[Unknown]',
-      Foo: 'Hello(123)'
+      Foo: 'Hello(123)',
+      Zero: 0
     });
   });
+
+
 });
 
 
@@ -86,7 +91,9 @@ describe('syncRecords', ()=> {
         Company: '[Unknown]',
         Email: 'bob@bob.com',
         Foo: 'Hello(123)',
-        City: 'City of Dufion' },
+        City: 'City of Dufion',
+        Zero: 0
+      },
       { FirstName: 'New',
         LastName: 'User',
         Email: 'new@user.com',

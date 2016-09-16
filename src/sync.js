@@ -1,5 +1,5 @@
 import Hogan from 'hogan.js';
-import { get } from 'lodash';
+import _ from 'lodash';
 export function syncRecords(sfObjectsByEmail, users, options) {
   return users.reduce((records, user)=> {
 
@@ -40,13 +40,12 @@ export function getUpdatedFields(user, sfObject, mapping) {
       if (typeof(def) === 'string') {
         val = user[def];
       } else if (def.key) {
-        val = get(user, def.key);
+        val = _.get(user, def.key);
       } else if (def.tpl) {
         val = Hogan.compile(def.tpl).render(user);
       }
 
-
-      if (defaultValue && (!val || val.length == 0)) {
+      if (defaultValue && (_.isNil(val) || val.length == 0)) {
         try {
           val = Hogan.compile(defaultValue).render(user);
         } catch (err) {
@@ -54,7 +53,7 @@ export function getUpdatedFields(user, sfObject, mapping) {
         }
       }
 
-      if (val && (val !== orig)) mapped[f] = val;
+      if (!_.isNil(val) && (val !== orig)) mapped[f] = val;
     }
 
     return mapped;
