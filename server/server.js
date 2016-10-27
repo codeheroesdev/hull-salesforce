@@ -1,3 +1,4 @@
+import _ from "lodash";
 import express from 'express';
 import cors from 'cors';
 import BatchSyncHandler from './batch-sync';
@@ -10,12 +11,16 @@ import librato from 'librato-node';
 import { renderFile } from 'ejs';
 
 function save(hull, ship, settings) {
- return hull.put(ship.id, {
-   private_settings: {
-     ...ship.private_settings,
-     ...settings
-   }
- });
+
+  console.warn("------ SAVING -------");
+  console.warn(JSON.stringify(settings, " ", 2));
+
+  return hull.put(ship.id, {
+    private_settings: {
+      ...ship.private_settings,
+      ...settings
+    }
+  });
 }
 
 
@@ -60,19 +65,21 @@ export function Server({ hostSecret }) {
     },
     onLogin: (req, { hull, ship }) => {
       req.authParams = { ...req.body, ...req.query };
-      return save(hull, ship, {
-        portalId: req.authParams.portalId
-      });
+      console.warn("\n\n--------- Hello Login =-------")
+      console.warn(JSON.stringify(req.authParams, " ", 2))
+      return Promise.resolve(req.authParams);
     },
     onAuthorize: (req, { hull, ship }) => {
 
       console.warn("\n\n\n\n============ onAuthorize ================")
-      console.warn({ account: req.account });
+      console.warn(JSON.stringify({ account: req.account }, " ", 2));
 
-      const { refreshToken, accessToken } = (req.account || {});
+      const { refreshToken, params } = (req.account || {});
+      const { access_token, instance_url } = params || {};
+      const salesforce_login = _.get(req, "account.profile._raw.username");
       return save(hull, ship, {
         refresh_token: refreshToken,
-        token: accessToken
+        access_token, instance_url, salesforce_login
       });
     },
     views: {

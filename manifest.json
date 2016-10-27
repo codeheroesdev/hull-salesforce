@@ -21,10 +21,20 @@
       "required" : true
     },
     {
-      "name": "token",
+      "name": "refresh_token",
       "type": "string",
       "required" : true
     },
+    {
+      "name": "access_token",
+      "type": "string",
+      "required" : true
+    },
+    {
+      "name": "instance_url",
+      "type": "string",
+      "required" : true
+    },    
     {
       "name": "salesforce_password",
       "type": "string",

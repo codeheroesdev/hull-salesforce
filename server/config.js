@@ -78,6 +78,9 @@ export function buildConfigFromShip(ship, organization, secret) {
     salesforce_login,
     salesforce_password,
     salesforce_login_url,
+    access_token,
+    refresh_token,
+    instance_url,
     synchronized_segments
   } = ship.private_settings;
 
@@ -110,6 +113,9 @@ export function buildConfigFromShip(ship, organization, secret) {
     salesforce: {
       login: salesforce_login,
       password: salesforce_password,
+      access_token,
+      refresh_token,
+      instance_url,
       loginUrl: salesforce_login_url || 'https://login.salesforce.com'
     },
     sync: {
