@@ -89,6 +89,56 @@ export class SF {
     });
   }
 
+
+  getFieldsList(type) {
+    return this.exec('describe', type).then(meta => {
+      const keys = [];
+      return meta.fields.reduce((fields, f) => {
+        return { ...fields, [f.name]: f };
+      }, {});
+    });
+  }
+
+  /**
+  * Fetch all records of a given type by ID
+  *
+  */
+  getRecordsByIds(ids, type) {
+    return this.getFieldsList(type).then((fields) => {
+      const fieldsList = _.keys(fields).join(',');
+      const idsList = ids.map(f => `'${f}'`).join(',');
+      const query = `SELECT ${fieldsList} FROM ${type} WHERE Id IN (${idsList}) AND Email != null`;
+      return this.exec('query', query);
+    });
+  }
+
+  getUpdatedRecords(type, options) {
+    const since = options.since ? new Date(options.since) : new Date(new Date().getTime() - (12 * 3600 * 1000));
+    const until = options.until ? new Date(options.until) : new Date();
+    return new Promise((resolve, reject) => {
+      return this.connection.sobject(type).updated(
+        since.toISOString(),
+        until.toISOString(),
+        (err, { ids }) => {
+          if (ids && ids.length > 0)  {
+            return this.getRecordsByIds(ids, type)
+              .then(({ records }) => resolve({
+                type,
+                records: records.map(rec => {
+                  return _.omitBy(rec, (v,k) => {
+                    return _.isEmpty(v) || k === 'attributes';
+                  })
+                })
+              }))
+              .catch(reject);
+          } else {
+            resolve({ type, records: [] });
+          }
+        }
+      );
+    })
+  }
+
   searchEmailsQuery(emails, mappings) {
     let findEmails = emails.reduce((a, e) => {
       e && e.length > 3 && a.push('"' + escapeSOSL(e) + '"');

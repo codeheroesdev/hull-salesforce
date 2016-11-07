@@ -5,7 +5,7 @@ import Hull from 'hull';
 
 export function config(env={}, options={}) {
   var defaults = {
-    hostSecret: env.SECRET,
+    hostSecret: env.SECRET || "BOOM",
     hull: {
       id: env.HULL_APP_ID,
       organization: env.HULL_ORG_URL,

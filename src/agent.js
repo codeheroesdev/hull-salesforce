@@ -13,6 +13,13 @@ function log(a,b,c) {
   }
 }
 
+function toUnderscore(str) {
+  return str
+    .replace(/([A-Z])/g, (c) => `_${c.toLowerCase()}`)
+    .replace(/^_/, '');
+}
+
+
 export default class Agent extends EventEmitter {
 
   static syncUsers(hull, ship, users, options = {}) {
@@ -30,6 +37,15 @@ export default class Agent extends EventEmitter {
     }
 
     return result;
+  }
+
+  static fetchChanges(hull, ship, options = {}) {
+    const { organization, secret } = hull.configuration();
+    const config = buildConfigFromShip(ship, organization, secret);
+    const agent = new Agent(config);
+    return agent.connect().then(() => {
+      return agent.fetchChanges(options);
+    });
   }
 
   constructor(config={}) {
@@ -90,6 +106,27 @@ export default class Agent extends EventEmitter {
     return users.filter(user => {
       const ids = (user.segments || []).map(s => s.id);
       return _.intersection(ids, segmentIds).length > 0;
+    });
+  }
+
+
+  fetchChanges(options = {}) {
+    const { mappings } = this.config;
+    return Promise.all(_.map(mappings, ({ type }) => {
+      return this.sf.getUpdatedRecords(type, options);
+    })).then(changes => {
+      changes.map(({ type, records }) => {
+        records.map(rec => {
+          const source = `salesforce_${type.toLowerCase()}`;
+          const traits = _.reduce(rec, (t,v,k) => {
+            return { ...t, [toUnderscore(k)]: v };
+          }, {});
+          return this.hull
+            .as({ email: traits.email })
+            .traits(traits, { source });
+        });
+      });
+      return { changes };
     });
   }
 

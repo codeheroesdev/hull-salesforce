@@ -1,6 +1,6 @@
 {
   "name" : "Salesforce",
-  "tags": ["outgoing","wideSettings", "batch"],
+  "tags": ["outgoing","oneColumn", "batch"],
   "description" : "Send Users as Leads or Contacts to Salesforce with custom mappings",
   "readme" : "readme.md",
   "version" : "0.2.0",
@@ -35,10 +35,19 @@
       },
       "default": []
     },
+
+    {
+      "name": "leads",
+      "title": "Leads sync",
+      "format": "title",
+      "type": "string"
+    },
+
     {
       "name" : "leads_mapping",
-      "title" : "Leads",
+      "title" : "Mapping Hull -> Salesforce",
       "type" : "array",
+      "format" : "table",
       "default" : [
         { "hull_field_name" : "first_name", "salesforce_field_name" : "FirstName", "default_value" : "[Unknown]", "overwrite" : false },
         { "hull_field_name" : "last_name", "salesforce_field_name" : "LastName", "default_value" : "[Unknown]", "overwrite" : false },
@@ -77,9 +86,16 @@
       }
     },
     {
+      "name": "contacts",
+      "title": "Contacts sync",
+      "format": "title",
+      "type": "string"
+    },
+    {
       "name" : "contacts_mapping",
-      "title" : "Contact",
+      "title" : "Mapping Hull -> Salesforce",
       "type" : "array",
+      "format" : "table",
       "default" : [
         { "hull_field_name" : "first_name", "salesforce_field_name" : "FirstName", "default_value" : "[Unknown]", "overwrite" : false },
         { "hull_field_name" : "last_name", "salesforce_field_name" : "LastName", "default_value" : "[Unknown]", "overwrite" : false },
@@ -116,6 +132,11 @@
           "salesforce_field_name"
         ]
       }
+    },
+    {
+      "name" : "last_sync_at",
+      "type" : "number",
+      "format" : "hidden"
     }
   ],
   "subscriptions" : [ { "url" : "/notify" } ]

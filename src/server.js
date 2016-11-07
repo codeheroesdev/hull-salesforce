@@ -2,7 +2,7 @@ import express from 'express';
 import BatchSyncHandler from './batch-sync';
 import Agent from './agent';
 import path from 'path';
-import { NotifHandler, BatchHandler } from 'hull';
+import { NotifHandler, BatchHandler, Middleware } from 'hull';
 import bodyParser from 'body-parser';
 import librato from 'librato-node';
 
@@ -26,6 +26,17 @@ export function Server({ hostSecret }) {
   const app = express();
 
   app.use(express.static(path.resolve(__dirname, '..', 'assets')));
+
+  app.post('/sync', Middleware({ hostSecret }), (req, res) => {
+    const { client: hull, ship } = req.hull;
+    Agent.fetchChanges(hull, ship).then(result => {
+      res.json({ ok: true, result });
+    }).catch(err => {
+      res.status(500);
+      res.json({ ok: false, error: err.message });
+    });
+  });
+
 
   app.post('/notify', NotifHandler({
     hostSecret,
