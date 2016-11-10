@@ -89,7 +89,6 @@ export function Server({ hostSecret }) {
       });
       return res.json({ options });
     }).catch(err => {
-      res.status(500);
       res.json({ ok: false, error: err.message, options: [] });
     });
   });
