@@ -60,7 +60,8 @@
     "librato-node": "^4.1.0",
     "lodash": "^4.16.6",
     "newrelic": "^1.33.0",
-    "nf": "^0.0.3"
+    "nf": "^0.0.3",
+    "rimraf": "^2.5.4"
   },
   "devDependencies": {
     "babel-cli": "^6.18.0",
