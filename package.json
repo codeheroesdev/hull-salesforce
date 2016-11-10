@@ -20,7 +20,7 @@
     "npm": "2.x"
   },
   "jest": {
-    "rootDir": "src",
+    "rootDir": "server",
     "scriptPreprocessor": "../node_modules/babel-jest",
     "testFileExtensions": [
       "es6",
@@ -55,7 +55,7 @@
     "cache-manager": "^2.2.0",
     "cors": "^2.8.1",
     "hogan.js": "^3.0.2",
-    "hull": "^0.10.3",
+    "hull": "^0.10.4",
     "jsforce": "^1.7.1",
     "librato-node": "^4.1.0",
     "lodash": "^4.16.6",

@@ -1947,9 +1947,9 @@ https-proxy-agent@^0.3.5:
     debug "2"
     extend "3"
 
-hull@^0.10.3:
-  version "0.10.3"
-  resolved "https://registry.yarnpkg.com/hull/-/hull-0.10.3.tgz#9ed72e0f56bcf489008ac48b098faf19d24e8617"
+hull@^0.10.4:
+  version "0.10.4"
+  resolved "https://registry.yarnpkg.com/hull/-/hull-0.10.4.tgz#21eb73953edece1b41523dcc2c9d2903d6f3dc30"
   dependencies:
     body-parser "^1.15.2"
     cache-manager "^2.1.2"
