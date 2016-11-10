@@ -16,7 +16,7 @@ export function Server({ hostSecret }) {
       token: process.env.LIBRATO_TOKEN
     });
     librato.on('error', function(err) {
-      console.error(err);
+      // console.error(err);
     });
 
     process.once('SIGINT', function() {

@@ -7,7 +7,7 @@ function increment(metric, value, options) {
       librato.increment(metric, value, options);
     }
   } catch(err) {
-    console.warn('Librato error', err)
+    // console.warn('Librato error', err)
   }
 }
 
@@ -17,7 +17,7 @@ function measure(metric, value, options) {
       librato.measure(metric, value, options);
     }
   } catch(err) {
-    console.warn('Librato error', err)
+    // console.warn('Librato error', err)
   }
 }
 

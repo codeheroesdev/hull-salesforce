@@ -9,7 +9,7 @@ function increment(metric, value, options) {
       librato.increment(metric, value, options);
     }
   } catch(err) {
-    console.warn('Librato error', err)
+    // console.warn('Librato error', err)
   }
 }
 
