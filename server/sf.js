@@ -89,7 +89,6 @@ export class SF {
     });
   }
 
-
   getFieldsList(type) {
     return this.exec('describe', type).then(meta => {
       const keys = [];
@@ -112,27 +111,28 @@ export class SF {
     });
   }
 
-  getUpdatedRecords(type, options) {
-    const since = options.since ? new Date(options.since) : new Date(new Date().getTime() - (12 * 3600 * 1000));
+  getUpdatedRecords(type, options = {}) {
+    const fields = options.fields || [];
+    const since = options.since ? new Date(options.since) : new Date(new Date().getTime() - (3600 * 1000));
     const until = options.until ? new Date(options.until) : new Date();
     return new Promise((resolve, reject) => {
       return this.connection.sobject(type).updated(
         since.toISOString(),
         until.toISOString(),
-        (err, { ids }) => {
+        (err, res = {}) => {
+          if (err) {
+            return reject(err);
+          }
+          const { ids } = res;
           if (ids && ids.length > 0)  {
             return this.getRecordsByIds(ids, type)
               .then(({ records }) => resolve({
-                type,
-                records: records.map(rec => {
-                  return _.omitBy(rec, (v,k) => {
-                    return _.isEmpty(v) || k === 'attributes';
-                  })
-                })
+                type, fields,
+                records: records
               }))
               .catch(reject);
           } else {
-            resolve({ type, records: [] });
+            resolve({ type, fields, records: [] });
           }
         }
       );

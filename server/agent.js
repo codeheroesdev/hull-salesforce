@@ -6,6 +6,7 @@ import Connection from './connection';
 import { getShipConfig, buildConfigFromShip } from './config';
 import { EventEmitter } from 'events';
 import jsforce from 'jsforce';
+import cacheManager from 'cache-manager';
 
 function log(a,b,c) {
   if (process.env.DEBUG) {
@@ -19,6 +20,7 @@ function toUnderscore(str) {
     .replace(/^_/, '');
 }
 
+const Cache = cacheManager.caching({ store: 'memory', max: 100, ttl: 60 });
 
 export default class Agent extends EventEmitter {
 
@@ -43,8 +45,36 @@ export default class Agent extends EventEmitter {
     const { organization, secret } = hull.configuration();
     const config = buildConfigFromShip(ship, organization, secret);
     const agent = new Agent(config);
+    const last_sync_at = parseInt(_.get(ship, 'settings.last_sync_at'), 10);
+    const since = new Date(last_sync_at - 60000);
+    if (since && since.getYear() === new Date().getYear()) {
+      options.since = since;
+    }
+
     return agent.connect().then(() => {
-      return agent.fetchChanges(options);
+      const last_sync_at = new Date().getTime();
+      return agent.fetchChanges(options).then(() => {
+        hull.get(ship.id).then(({ settings }) => {
+          hull.put(ship.id, { settings: {
+            ...settings, last_sync_at
+          }});
+        })
+      });
+    });
+  }
+
+  static getFieldsSchema(hull, ship) {
+    if (!hull || !ship) {
+      return Promise.resolve(DEFAULT_FIELDS_SCHEMA);
+    }
+    const { organization, secret } = hull.configuration();
+    const cacheKey = [ship.id, ship.updated_at, secret].join('/');
+    return Cache.wrap(cacheKey, () => {
+      const config = buildConfigFromShip(ship, organization, secret);
+      const agent = new Agent(config);
+      return agent.connect().then(() => {
+        return agent.getFieldsSchema();
+      });
     });
   }
 
@@ -109,21 +139,42 @@ export default class Agent extends EventEmitter {
     });
   }
 
+  getFieldsSchema() {
+    const { mappings } = this.config;
+    return Promise.all(_.map(mappings, ({ type }) => {
+      return this.sf.getFieldsList(type).then(fields => {
+        return { type: type.toLowerCase(), fields };
+      });
+    })).then(fieldsByType => {
+      return fieldsByType.reduce((schema, { fields, type }) => {
+        return { ...schema,
+          [`${type}`]: _.map(fields, 'name').sort(),
+          [`${type}_updateable`]: _.map(_.filter(fields, { updateable: true }), 'name').sort(),
+          [`${type}_custom`]: _.map(_.filter(fields, { custom: true }), 'name').sort()
+        };
+      }, {});
+    })
+  }
 
   fetchChanges(options = {}) {
     const { mappings } = this.config;
-    return Promise.all(_.map(mappings, ({ type }) => {
-      return this.sf.getUpdatedRecords(type, options);
+    return Promise.all(_.map(mappings, ({ type, fetchFields }) => {
+      if (fetchFields && fetchFields.length > 0) {
+        return this.sf.getUpdatedRecords(type, { ...options, fields: fetchFields });
+      }
+      return { type, fields: fetchFields, records: [] };
     })).then(changes => {
-      changes.map(({ type, records }) => {
+      changes.map(({ type, records, fields }) => {
         records.map(rec => {
           const source = `salesforce_${type.toLowerCase()}`;
-          const traits = _.reduce(rec, (t,v,k) => {
-            return { ...t, [toUnderscore(k)]: v };
+          const traits = _.reduce(fields, (t,k) => {
+            return { ...t, [toUnderscore(k)]: rec[k] };
           }, {});
-          return this.hull
-            .as({ email: traits.email })
-            .traits(traits, { source });
+          if (!_.isEmpty(traits)) {
+            return this.hull
+              .as({ email: rec.Email })
+              .traits(traits, { source });
+          }
         });
       });
       return { changes };

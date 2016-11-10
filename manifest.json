@@ -6,7 +6,13 @@
   "version" : "0.2.0",
   "picture": "picture.png",
   "ui": false,
-  "settings" : [],
+  "settings" : [
+    {
+      "name" : "last_sync_at",
+      "type" : "number",
+      "format" : "hidden"
+    }
+  ],
   "private_settings" : [
     {
       "name": "salesforce_login",
@@ -35,17 +41,15 @@
       },
       "default": []
     },
-
     {
       "name": "leads",
       "title": "Leads sync",
       "format": "title",
       "type": "string"
     },
-
     {
       "name" : "leads_mapping",
-      "title" : "Mapping Hull -> Salesforce",
+      "title" : "List of Lead fields to push to Salesforce",
       "type" : "array",
       "format" : "table",
       "default" : [
@@ -63,26 +67,31 @@
           },
           "salesforce_field_name" : {
             "type" : "string",
-            "title" : "Salesforce Field"
+            "title" : "Salesforce Field",
+            "format" : "select",
+            "options" : {
+              "loadOptions" : "/schema/lead_updateable"
+            }
           },
           "overwrite" : {
             "type" : "boolean",
-            "title" : "Hull overwrites Salesforce",
+            "title" : "overwrite",
             "default" : false
-          },
-          "default_value" : {
-            "type" : "string",
-            "title" : "Default Value"
-          },
-          "tpl" : {
-            "type" : "string",
-            "title" : "Template for calculated value"
           }
         },
         "required" : [
           "hull_field_name",
           "salesforce_field_name"
         ]
+      }
+    },
+    {
+      "name" : "fetch_lead_fields",
+      "title" : "List of Lead fields to fetch from Salesforce",
+      "type" : "array",
+      "format" : "select",
+      "options" : {
+        "loadOptions" : "/schema/lead"
       }
     },
     {
@@ -93,7 +102,7 @@
     },
     {
       "name" : "contacts_mapping",
-      "title" : "Mapping Hull -> Salesforce",
+      "title" : "List of Contact fields to push to Salesforce",
       "type" : "array",
       "format" : "table",
       "default" : [
@@ -111,20 +120,16 @@
           },
           "salesforce_field_name" : {
             "type" : "string",
-            "title" : "Salesforce Field"
+            "title" : "Salesforce Field",
+            "format" : "select",
+            "options" : {
+              "loadOptions": "/schema/contact_updateable"
+            }
           },
           "overwrite" : {
             "type" : "boolean",
             "title" : "Hull overwrites Salesforce",
             "default" : false
-          },
-          "default_value" : {
-            "type" : "string",
-            "title" : "Default Value"
-          },
-          "tpl" : {
-            "type" : "string",
-            "title" : "Template for calculated value"
           }
         },
         "required" : [
@@ -134,9 +139,20 @@
       }
     },
     {
-      "name" : "last_sync_at",
-      "type" : "number",
-      "format" : "hidden"
+      "name" : "fetch_contact_fields",
+      "title" : "List of Contact fields to fetch from Salesforce",
+      "type" : "array",
+      "format" : "select",
+      "options" : {
+        "loadOptions" : "/schema/contact"
+      }
+    }
+  ],
+  "schedules": [
+    {
+      "url": "/sync",
+      "type": "cron",
+      "value": "*/5 * * * *"
     }
   ],
   "subscriptions" : [ { "url" : "/notify" } ]

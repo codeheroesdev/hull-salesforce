@@ -83,6 +83,7 @@ export function buildConfigFromShip(ship, organization, secret) {
 
   const mappings = ['Lead', 'Contact'].reduce((maps, type) => {
     const fieldsList = ship.private_settings[`${type.toLowerCase()}s_mapping`];
+    const fetchFields = ship.private_settings[`fetch_${type.toLowerCase()}_fields`] || [];
     if (fieldsList && fieldsList.length > 0) {
       const fields = fieldsList.reduce((ff, field) => {
         const f = { key: field.hull_field_name, overwrite: !!field.overwrite };
@@ -98,7 +99,7 @@ export function buildConfigFromShip(ship, organization, secret) {
         return ff;
       }, {});
 
-      maps[type] = { type, fields };
+      maps[type] = { type, fields, fetchFields };
     }
 
     return maps;

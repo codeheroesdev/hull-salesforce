@@ -1,15 +1,12 @@
-#!/usr/bin/env node
-
-require("babel/register");
-var argv = require('minimist')(process.argv);
-var Server = require('../src/server').Server;
-var config = require('../src/config').config(process.env, argv);
-var PORT = process.env.PORT || 5000;
-
 if (process.env.NEW_RELIC_LICENSE_KEY) {
   console.warn('starting newrelic with key: ', process.env.NEW_RELIC_LICENSE_KEY);
   require('newrelic');
 }
+
+var Server = require('./server').Server;
+var config = require('./config').config(process.env);
+var PORT = process.env.PORT || 8082;
+
 
 console.warn("Starting on PORT " + PORT);
 const server = Server(config);
@@ -28,4 +25,3 @@ function handleExit() {
 
 process.on("SIGINT", handleExit);
 process.on("SIGTERM", handleExit);
-

@@ -1,10 +1,12 @@
 import express from 'express';
+import cors from 'cors';
 import BatchSyncHandler from './batch-sync';
 import Agent from './agent';
 import path from 'path';
 import { NotifHandler, BatchHandler, Middleware } from 'hull';
 import bodyParser from 'body-parser';
 import librato from 'librato-node';
+
 
 export function Server({ hostSecret }) {
 
@@ -37,7 +39,6 @@ export function Server({ hostSecret }) {
     });
   });
 
-
   app.post('/notify', NotifHandler({
     hostSecret,
     groupTraits: false,
@@ -66,7 +67,7 @@ export function Server({ hostSecret }) {
     hostSecret,
     batchSize: 2000,
     groupTraits: false,
-    handler: (notifications = [], { ship, hull }) => {
+    handler(notifications = [], { ship, hull }) {
       const users = notifications.map(n => n.message);
       return Agent
         .syncUsers(hull, ship, users, { applyFilters: false })
@@ -77,6 +78,20 @@ export function Server({ hostSecret }) {
 
   app.get('/manifest.json', (req, res) => {
     res.sendFile(path.resolve(__dirname, '..', 'manifest.json'));
+  });
+
+  app.get('/schema(/:type)', cors(), Middleware({ hostSecret, requireCredentials: false }), (req, res) => {
+    const { type } = req.params || {};
+    const { client: hull, ship } = req.hull;
+    return Agent.getFieldsSchema(hull, ship).then((definitions = {}) => {
+      const options = (definitions[type] || []).map(t => {
+        return { value: t, label: t };
+      });
+      return res.json({ options });
+    }).catch(err => {
+      res.status(500);
+      res.json({ ok: false, error: err.message, options: [] });
+    });
   });
 
   return {
