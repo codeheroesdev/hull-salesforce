@@ -3,7 +3,7 @@ import librato from 'librato-node';
 
 function increment(metric, value, options) {
   try {
-    if (librato.increment) {
+    if (librato && librato.increment) {
       librato.increment(metric, value, options);
     }
   } catch(err) {
@@ -13,7 +13,7 @@ function increment(metric, value, options) {
 
 function measure(metric, value, options) {
   try {
-    if (librato.measure) {
+    if (librato && librato.measure) {
       librato.measure(metric, value, options);
     }
   } catch(err) {
