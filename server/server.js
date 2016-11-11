@@ -60,8 +60,11 @@ export function Server({ hostSecret }) {
     },
     isSetup(req, { /* hull,*/ ship }) {
       if (!!req.query.reset) return Promise.reject();
-      const { token } = ship.private_settings || {};
-      return (!!token) ? Promise.resolve() : Promise.reject();
+      const { access_token, refresh_token, instance_url } = ship.private_settings || {};
+
+      if (access_token && refresh_token && instance_url) return Promise.resolve(ship);
+
+      return Promise.reject();
     },
     onLogin: (req, { hull, ship }) => {
       req.authParams = { ...req.body, ...req.query };
