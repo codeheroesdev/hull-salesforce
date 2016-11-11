@@ -65,7 +65,7 @@ export default class Agent extends EventEmitter {
 
   static getFieldsSchema(hull, ship) {
     if (!hull || !ship) {
-      return Promise.resolve(DEFAULT_FIELDS_SCHEMA);
+      return Promise.resolve({});
     }
     const { organization, secret } = hull.configuration();
     const cacheKey = [ship.id, ship.updated_at, secret].join('/');
