@@ -12,9 +12,10 @@ export function config(env={}, options={}) {
       secret: env.HULL_APP_SECRET
     },
     salesforce: {
-      login: env.SALESFORCE_LOGIN,
-      password: env.SALESFORCE_PASSWORD,
-      loginUrl: env.SALESFORCE_LOGIN_URL || 'https://login.salesforce.com'
+      oauth2: {
+        clientId : process.env.CLIENT_ID,
+        clientSecret : process.env.CLIENT_SECRET
+      }
     },
     sync: {
       fetchRange: '1h',
@@ -75,9 +76,6 @@ function getHullClient(organization, id, secret) {
 export function buildConfigFromShip(ship, organization, secret) {
 
   const {
-    salesforce_login,
-    salesforce_password,
-    salesforce_login_url,
     access_token,
     refresh_token,
     instance_url,
@@ -111,12 +109,13 @@ export function buildConfigFromShip(ship, organization, secret) {
   return {
     hull: { organization, id: ship.id, secret },
     salesforce: {
-      login: salesforce_login,
-      password: salesforce_password,
-      access_token,
-      refresh_token,
-      instance_url,
-      loginUrl: salesforce_login_url || 'https://login.salesforce.com'
+      accessToken: access_token,
+      refreshToken: refresh_token,
+      instanceUrl: instance_url,
+      oauth2: {
+        clientId : process.env.CLIENT_ID,
+        clientSecret : process.env.CLIENT_SECRET
+      }
     },
     sync: {
       segmentIds: synchronized_segments || [],

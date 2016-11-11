@@ -87,45 +87,26 @@ export default class Agent extends EventEmitter {
 
   connect() {
     if (this._connect) return this._connect;
-    // Configure with Salesforce and Hull credentials
+    const shipId = this.config.hull.id;
+    const conn = new Connection(this.config.salesforce);
+    conn.setShipId(shipId);
 
-    this.on('error', (err) => {
-      console.warn('Sync Error ', err);
-    });
+    this.sf = new SF(conn);
+    this.hull = new Hull(this.config.hull);
+    this._connect = Promise.resolve(conn);
 
-    let connect = new Promise((resolve, reject)=> {
-      // Salesforce
-      let { login, password, loginUrl } = this.config.salesforce;
-      var conn = new Connection({ loginUrl : loginUrl });
-      conn.setShipId(this.config.hull.id);
-      if (login && password) {
-        conn.login(login, password, (err, userInfo)=> {
-          if (err) {
-            this.emit('error', err);
-            reject(err);
-          } else {
-            this.emit('connect', userInfo);
-            this.sf = new SF(conn);
-            this.userInfo = userInfo;
-            resolve(conn);
+    conn.on("refresh", (access_token, res) => {
+      this.hull.get(shipId).then(({ private_settings }) => {
+        this.hull.put(shipId, {
+          private_settings: {
+            ...private_settings,
+            access_token
           }
         });
-      } else {
-        reject(new Error('Salesforce credentials missing'));
-      }
-
-      // Hull
-      this.hull = new Hull(this.config.hull);
-
+      });
     });
 
-    connect.catch((err) => {
-      console.log('Error establishing connection with Salesforce: for ', login, err)
-      return err;
-    })
-
-    this._connect = connect;
-    return connect;
+    return this._connect;
   }
 
   getUsersMatchingSegments(users) {

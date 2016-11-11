@@ -16,35 +16,19 @@
   ],
   "private_settings" : [
     {
-      "name": "salesforce_login",
-      "type": "string",
-      "required" : true
-    },
-    {
       "name": "refresh_token",
       "type": "string",
-      "required" : true
+      "format" : "hidden"
     },
     {
       "name": "access_token",
       "type": "string",
-      "required" : true
+      "format" : "hidden"
     },
     {
       "name": "instance_url",
       "type": "string",
-      "required" : true
-    },    
-    {
-      "name": "salesforce_password",
-      "type": "string",
-      "required" : true
-    },
-    {
-      "name": "salesforce_login_url",
-      "type": "string",
-      "required" : true,
-      "default" : "https://login.salesforce.com"
+      "format" : "hidden"
     },
     {
       "name": "synchronized_segments",

@@ -65,15 +65,9 @@ export function Server({ hostSecret }) {
     },
     onLogin: (req, { hull, ship }) => {
       req.authParams = { ...req.body, ...req.query };
-      console.warn("\n\n--------- Hello Login =-------")
-      console.warn(JSON.stringify(req.authParams, " ", 2))
       return Promise.resolve(req.authParams);
     },
     onAuthorize: (req, { hull, ship }) => {
-
-      console.warn("\n\n\n\n============ onAuthorize ================")
-      console.warn(JSON.stringify({ account: req.account }, " ", 2));
-
       const { refreshToken, params } = (req.account || {});
       const { access_token, instance_url } = params || {};
       const salesforce_login = _.get(req, "account.profile._raw.username");
