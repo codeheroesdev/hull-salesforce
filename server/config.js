@@ -79,7 +79,10 @@ export function buildConfigFromShip(ship, organization, secret) {
     access_token,
     refresh_token,
     instance_url,
-    synchronized_segments
+    synchronized_segments,
+    salesforce_login,
+    salesforce_password,
+    salesforce_login_url
   } = ship.private_settings;
 
   const mappings = ['Lead', 'Contact'].reduce((maps, type) => {
@@ -107,17 +110,30 @@ export function buildConfigFromShip(ship, organization, secret) {
     return maps;
   }, {});
 
-  return {
-    hull: { organization, id: ship.id, secret },
-    salesforce: {
+  let credentials = {};
+
+  if (access_token && instance_url) {
+    credentials = {
       accessToken: access_token,
       refreshToken: refresh_token,
-      instanceUrl: instance_url,
-      oauth2: {
-        clientId : process.env.CLIENT_ID,
-        clientSecret : process.env.CLIENT_SECRET
-      }
-    },
+      instanceUrl: instance_url
+    };
+  } else if ( salesforce_login && salesforce_password) {
+    credentials = {
+      login: salesforce_login,
+      password: salesforce_password,
+      loginUrl: salesforce_login_url
+    };
+  }
+
+  const oauth2 = {
+    clientId : process.env.CLIENT_ID,
+    clientSecret : process.env.CLIENT_SECRET
+  };
+
+  return {
+    hull: { organization, id: ship.id, secret },
+    salesforce: { ...credentials, oauth2 },
     sync: {
       segmentIds: synchronized_segments || [],
       fetchRange: '3d',
