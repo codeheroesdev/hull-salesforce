@@ -102,12 +102,13 @@ export class SF {
   * Fetch all records of a given type by ID
   *
   */
-  getRecordsByIds(ids, type) {
-    return this.getFieldsList(type).then((fields) => {
-      const fieldsList = _.keys(fields).join(',');
+  getRecordsByIds(type, ids, options = {}) {
+    const fieldsList = (options && options.fields && options.fields.length > 0) ? Promise.resolve(options.fields) : this.getFieldsList(type).then(_.keys);
+    return fieldsList.then((fields) => {
+      const fieldsList = _.uniq(fields.concat(['Id', 'Email'])).join(',');
       const idsList = ids.map(f => `'${f}'`).join(',');
       const query = `SELECT ${fieldsList} FROM ${type} WHERE Id IN (${idsList}) AND Email != null`;
-      return this.exec('query', query);
+      return this.exec('query', query).then(({ records }) => records );
     });
   }
 
@@ -123,13 +124,13 @@ export class SF {
           if (err) {
             return reject(err);
           }
-          const { ids } = res;
-          if (ids && ids.length > 0)  {
-            return this.getRecordsByIds(ids, type)
-              .then(({ records }) => resolve({
-                type, fields,
-                records: records
-              }))
+          if (res.ids && res.ids.length > 0)  {
+            const chunks = _.chunk(res.ids, 100)
+              .map((ids) => this.getRecordsByIds(type, ids, { fields }));
+              
+            Promise.all(chunks)
+              .then(_.flatten)
+              .then(records => resolve({ type, fields, records }))
               .catch(reject);
           } else {
             resolve({ type, fields, records: [] });
