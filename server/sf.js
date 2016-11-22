@@ -130,7 +130,10 @@ export class SF {
               
             Promise.all(chunks)
               .then(_.flatten)
-              .then(records => resolve({ type, fields, records }))
+              .then(records => {
+                increment('salesforce:updated_records', 1, { source: this.connection._shipId });
+                resolve({ type, fields, records })
+              })
               .catch(reject);
           } else {
             resolve({ type, fields, records: [] });
