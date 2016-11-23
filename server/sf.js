@@ -131,8 +131,10 @@ export class SF {
             Promise.all(chunks)
               .then(_.flatten)
               .then(records => {
-                increment('salesforce:updated_records', records.length, { source: this.connection._shipId });
                 resolve({ type, fields, records })
+                if (records && records.length) {
+                  increment('salesforce:updated_records', records.length, { source: this.connection._shipId });  
+                }
               })
               .catch(reject);
           } else {
