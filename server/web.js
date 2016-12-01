@@ -3,7 +3,7 @@ if (process.env.NEW_RELIC_LICENSE_KEY) {
   require('newrelic');
 }
 
-var Server = require('./server').Server;
+var Server = require('./server').default;
 var config = require('./config').config(process.env);
 var PORT = process.env.PORT || 8082;
 

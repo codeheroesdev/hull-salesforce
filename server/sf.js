@@ -51,7 +51,7 @@ export class SF {
           log('upsert error', JSON.stringify({ err, res, externalIDFieldName, input }));
           reject(err);
         } else {
-          console.warn("upsert success", JSON.stringify({ err, res, externalIDFieldName, input }));
+          console.log("upsert success", JSON.stringify({ err, res, externalIDFieldName, input }));
           if (_.isArray(res)) {
             res.map((r,idx) => {
               increment('salesforce:errors', 1, { source: this.connection._shipId });
@@ -105,11 +105,27 @@ export class SF {
   getRecordsByIds(type, ids, options = {}) {
     const fieldsList = (options && options.fields && options.fields.length > 0) ? Promise.resolve(options.fields) : this.getFieldsList(type).then(_.keys);
     return fieldsList.then((fields) => {
-      const fieldsList = _.uniq(fields.concat(['Id', 'Email'])).join(',');
+      const selectFields = _.uniq(fields.concat(['Id', 'Email', 'FirstName', 'LastName'])).join(',');
       const idsList = ids.map(f => `'${f}'`).join(',');
-      const query = `SELECT ${fieldsList} FROM ${type} WHERE Id IN (${idsList}) AND Email != null`;
+      const query = `SELECT ${selectFields} FROM ${type} WHERE Id IN (${idsList}) AND Email != null`;
       return this.exec('query', query).then(({ records }) => records );
     });
+  }
+
+  getAllRecords({ type, fields = [] }, onRecord) {
+    const selectFields = _.uniq(fields.concat(['Id', 'Email', 'FirstName', 'LastName'])).join(',');
+    return new Promise((resolve, reject) => {
+      const soql = `SELECT ${selectFields} FROM ${type} WHERE Email != null`;
+      const query = this.connection.query(soql)
+        .on("record", onRecord)
+        .on("end", () => {
+          resolve({ query, type, fields });
+        })
+        .on("error", function(err) {
+          reject(err);
+        })
+        .run({ autoFetch : true });
+    })
   }
 
   getUpdatedRecords(type, options = {}) {
@@ -127,13 +143,13 @@ export class SF {
           if (res.ids && res.ids.length > 0)  {
             const chunks = _.chunk(res.ids, 100)
               .map((ids) => this.getRecordsByIds(type, ids, { fields }));
-              
+
             Promise.all(chunks)
               .then(_.flatten)
               .then(records => {
                 resolve({ type, fields, records })
                 if (records && records.length) {
-                  increment('salesforce:updated_records', records.length, { source: this.connection._shipId });  
+                  increment('salesforce:updated_records', records.length, { source: this.connection._shipId });
                 }
               })
               .catch(reject);
@@ -142,7 +158,7 @@ export class SF {
           }
         }
       );
-    })
+    });
   }
 
   searchEmailsQuery(emails, mappings) {

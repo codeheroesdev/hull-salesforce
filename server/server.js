@@ -1,20 +1,18 @@
 import _ from "lodash";
-import express from 'express';
-import cors from 'cors';
-import BatchSyncHandler from './batch-sync';
-import Agent from './agent';
-import path from 'path';
-import { NotifHandler, BatchHandler, Middleware, OAuthHandler } from 'hull';
-import { Strategy } from 'passport-forcedotcom';
-import bodyParser from 'body-parser';
-import librato from 'librato-node';
-import { renderFile } from 'ejs';
+import express from "express";
+import cors from "cors";
+import path from "path";
+import { NotifHandler, BatchHandler, Middleware, OAuthHandler } from "hull";
+import { Strategy } from "passport-forcedotcom";
+import bodyParser from "body-parser";
+import librato from "librato-node";
+import { renderFile } from "ejs";
+
+import BatchSyncHandler from "./batch-sync";
+import Agent from "./agent";
+
 
 function save(hull, ship, settings) {
-
-  console.warn("------ SAVING -------");
-  console.warn(JSON.stringify(settings, " ", 2));
-
   return hull.put(ship.id, {
     private_settings: {
       ...ship.private_settings,
@@ -24,20 +22,20 @@ function save(hull, ship, settings) {
 }
 
 
-export function Server({ hostSecret }) {
-
+export default function Server({ hostSecret }) {
   if (process.env.LIBRATO_TOKEN && process.env.LIBRATO_USER) {
     librato.configure({
       email: process.env.LIBRATO_USER,
       token: process.env.LIBRATO_TOKEN
     });
-    librato.on('error', function(err) {
-      // console.error(err);
-    });
+    // librato.on("error", () => {
+    //   console.error(err);
+    // });
 
-    process.once('SIGINT', function() {
+    process.once("SIGINT", () => {
       librato.stop(); // stop optionally takes a callback
     });
+
     librato.start();
   }
 
@@ -55,8 +53,8 @@ export function Server({ hostSecret }) {
     Strategy,
     options: {
       clientID: process.env.CLIENT_ID,
-      clientSecret: process.env.CLIENT_SECRET, //Client Secret
-      scope: ["refresh_token", "api"] //App Scope
+      clientSecret: process.env.CLIENT_SECRET, // Client Secret
+      scope: ["refresh_token", "api"] // App Scope
     },
     isSetup(req, { /* hull,*/ ship }) {
       if (!!req.query.reset) return Promise.reject();
@@ -87,17 +85,27 @@ export function Server({ hostSecret }) {
     },
   }));
 
-  app.post('/sync', Middleware({ hostSecret }), (req, res) => {
+  app.post("/sync", Middleware({ hostSecret }), (req, res) => {
     const { client: hull, ship } = req.hull;
-    Agent.fetchChanges(hull, ship).then(result => {
+    Agent.fetchChanges(hull, ship).then((result) => {
       res.json({ ok: true, result });
-    }).catch(err => {
+    }).catch((err) => {
       res.status(500);
       res.json({ ok: false, error: err.message });
     });
   });
 
-  app.post('/notify', NotifHandler({
+  app.post("/fetch-all", Middleware({ hostSecret }), (req, res) => {
+    const { client: hull, ship } = req.hull;
+    Agent.fetchAll(hull, ship).then((result) => {
+      res.json({ ok: true, result });
+    }).catch((err) => {
+      res.status(500);
+      res.json({ ok: false, error: err.message });
+    });
+  });
+
+  app.post("/notify", NotifHandler({
     hostSecret,
     groupTraits: false,
     onSusbscribe(message, context) {
@@ -107,13 +115,14 @@ export function Server({ hostSecret }) {
       console.warn("Error", status, message);
     },
     handlers: {
-      'user:update' : function({ message }, { ship, hull }) {
+      "user:update": ({ message }, { ship, hull }) => {
         try {
           BatchSyncHandler.handle(message, { ship, hull });
           if (process.env.LIBRATO_TOKEN && process.env.LIBRATO_USER) {
-            librato.increment('user_report:update', 1, { source: ship.id });
+            librato.increment("user_report:update", 1, { source: ship.id });
           }
-        } catch(err) {
+          return true;
+        } catch (err) {
           console.warn("Error in Users sync", err, err.stack);
           return err;
         }
@@ -121,7 +130,7 @@ export function Server({ hostSecret }) {
     }
   }));
 
-  app.post('/batch', BatchHandler({
+  app.post("/batch", BatchHandler({
     hostSecret,
     batchSize: 2000,
     groupTraits: false,
@@ -129,31 +138,30 @@ export function Server({ hostSecret }) {
       const users = notifications.map(n => n.message);
       return Agent
         .syncUsers(hull, ship, users, { applyFilters: false })
-        .then(ok => console.warn('batch done'))
-        .catch(err => console.warn('batch err', err));
+        .then(() => console.warn("batch done"))
+        .catch(err => console.warn("batch err", err));
     }
   }));
 
-  app.get('/manifest.json', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '..', 'manifest.json'));
+  app.get("/manifest.json", (req, res) => {
+    res.sendFile(path.resolve(__dirname, "..", "manifest.json"));
   });
 
-  app.get('/schema(/:type)', cors(), Middleware({ hostSecret, requireCredentials: false }), (req, res) => {
+  app.get("/schema(/:type)", cors(), Middleware({ hostSecret, requireCredentials: false }), (req, res) => {
     const { type } = req.params || {};
     const { client: hull, ship } = req.hull;
     return Agent.getFieldsSchema(hull, ship).then((definitions = {}) => {
-      const options = (definitions[type] || []).map(t => {
+      const options = (definitions[type] || []).map((t) => {
         return { value: t, label: t };
       });
       return res.json({ options });
-    }).catch(err => {
+    }).catch((err) => {
       res.json({ ok: false, error: err.message, options: [] });
     });
   });
 
   return {
-    listen: (port) => app.listen(port),
-    exit: ()=> BatchSyncHandler.exit()
+    listen: port => app.listen(port),
+    exit: () => BatchSyncHandler.exit()
   };
-
 }

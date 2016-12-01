@@ -41,6 +41,16 @@ export default class Agent extends EventEmitter {
     return result;
   }
 
+  static fetchAll(hull, ship) {
+    const { organization, secret } = hull.configuration();
+    const config = buildConfigFromShip(ship, organization, secret);
+    const agent = new Agent(config);
+    return agent.connect().then(() => {
+      agent.fetchAll();
+      return true;
+    });
+  }
+
   static fetchChanges(hull, ship, options = {}) {
     const { organization, secret } = hull.configuration();
     const config = buildConfigFromShip(ship, organization, secret);
@@ -190,6 +200,35 @@ export default class Agent extends EventEmitter {
         };
       }, {});
     })
+  }
+
+  fetchAll() {
+    const { mappings } = this.config;
+    return Promise.all(_.map(mappings, ({ type, fetchFields: fields }) => {
+      if (fields && fields.length > 0) {
+        return this.sf.getAllRecords({ type, fields }, (record = {}) => {
+          const source = `salesforce_${type.toLowerCase()}`;
+          const traits = _.reduce(fields, (t,k) => {
+            const val = record[k];
+            if (val != null) {
+              return { ...t, [`${source}/${toUnderscore(k)}`]: val };
+            } else {
+              return t;
+            }
+
+          }, {
+            first_name: { operation: 'setIfNull', value: record.FirstName },
+            last_name:  { operation: 'setIfNull', value: record.LastName },
+            [`${source}/id`]: record.Id
+          });
+          if (!_.isEmpty(traits)) {
+            return this.hull
+              .as({ email: record.Email })
+              .traits(traits);
+          }
+        });
+      }
+    }))
   }
 
   fetchChanges(options = {}) {
