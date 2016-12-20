@@ -90,7 +90,8 @@ export default function Server({ hostSecret }) {
     Agent.fetchChanges(hull, ship).then((result) => {
       res.json({ ok: true, result });
     }).catch((err) => {
-      res.status(500);
+      hull.logger.error("sync error", { message: err.message, status: err.status });
+      res.status(err.status || 500);
       res.json({ ok: false, error: err.message });
     });
   });
@@ -100,7 +101,8 @@ export default function Server({ hostSecret }) {
     Agent.fetchAll(hull, ship).then((result) => {
       res.json({ ok: true, result });
     }).catch((err) => {
-      res.status(500);
+      hull.logger.error("fetch-all error", { message: err.message, status: err.status });
+      res.status(err.status || 500);
       res.json({ ok: false, error: err.message });
     });
   });

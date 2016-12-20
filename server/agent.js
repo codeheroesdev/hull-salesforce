@@ -103,7 +103,9 @@ export default class Agent extends EventEmitter {
     } else if (salesforce.login && salesforce.password) {
       return this.connectWithPassword();
     } else {
-      return Promise.reject(new Error("Missing credentials"));
+      const err = new Error("Missing credentials");
+      err.status = 403;
+      return Promise.reject(err);
     }
   }
 
