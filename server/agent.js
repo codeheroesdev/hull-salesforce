@@ -180,9 +180,6 @@ export default class Agent extends EventEmitter {
 
   getUsersMatchingSegments(users) {
     const { segmentIds } = this.config.sync || {};
-    if (_.isEmpty(segmentIds)) {
-      return users;
-    }
     return users.filter(user => {
       const ids = (user.segments || []).map(s => s.id);
       return _.intersection(ids, segmentIds).length > 0;
