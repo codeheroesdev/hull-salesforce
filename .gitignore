@@ -6,3 +6,6 @@ tmp
 config.json
 dist
 build
+
+# Mac tmp files
+.DS_Store
