@@ -235,22 +235,29 @@ export default class Agent extends EventEmitter {
   fetchChanges(options = {}) {
     const { mappings } = this.config;
     return Promise.all(_.map(mappings, ({ type, fetchFields }) => {
+      const fields = _.keys(fetchFields);
       this.hull.logger.info("incoming.job.start", { jobName: "fetchChanges", type, fetchFields });
-      if (fetchFields && fetchFields.length > 0) {
-        return this.sf.getUpdatedRecords(type, { ...options, fields: fetchFields });
+      if (fields && fields.length > 0) {
+        return this.sf.getUpdatedRecords(type, { ...options, fields });
       }
       return { type, fields: fetchFields, records: [] };
     })).then(changes => {
       changes.map(({ type, records, fields }) => {
         records.map(rec => {
           const source = `salesforce_${type.toLowerCase()}`;
-          const traits = _.reduce(fields, (t,k) => {
-            return { ...t, [toUnderscore(k)]: rec[k] };
+          const traits = _.reduce(fields, (t, k) => {
+            // Adds salesforce attribute
+            t[source + '/' + toUnderscore(k)] = rec[k];
+            // Adds hull top level property if the salesforce attribute can be mapped
+            if (mappings[type].fetchFields && !_.isNil(mappings[type].fetchFields[k])) {
+              t[mappings[type].fetchFields[k]] = rec[k];
+            }
+            return t;
           }, {});
           if (!_.isEmpty(traits)) {
             return this.hull
               .as({ email: rec.Email })
-              .traits(traits, { source })
+              .traits(traits)
               .then(() => this.hull.logger.info("incoming.user.success", { email: rec.Email, traits }));
           }
         });

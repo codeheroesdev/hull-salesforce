@@ -10,3 +10,6 @@ build
 .vscode
 
 package-lock.json
+
+# Mac tmp files
+.DS_Store

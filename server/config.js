@@ -2,6 +2,7 @@ import { resolve } from 'path';
 import { readFileSync } from 'fs';
 import { createHmac } from 'crypto';
 import Hull from 'hull';
+import { getFieldsToHull } from './mapping_data';
 
 export function config(env={}, options={}) {
   var defaults = {
@@ -72,7 +73,6 @@ function getHullClient(organization, id, secret) {
   return new Hull({ organization, id, secret });
 }
 
-
 export function buildConfigFromShip(ship, organization, secret) {
 
   const {
@@ -87,7 +87,8 @@ export function buildConfigFromShip(ship, organization, secret) {
 
   const mappings = ['Lead', 'Contact'].reduce((maps, type) => {
     const fieldsList = ship.private_settings[`${type.toLowerCase()}s_mapping`];
-    const fetchFields = ship.private_settings[`fetch_${type.toLowerCase()}_fields`] || [];
+    // const fetchFields = ship.private_settings[`fetch_${type.toLowerCase()}_fields`] || [];
+    const fetchFields = getFieldsToHull(type)
     maps[type] = { type, fetchFields, fields: {} };
     if (fieldsList && fieldsList.length > 0) {
       const fields = fieldsList.reduce((ff, field) => {
