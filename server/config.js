@@ -1,3 +1,4 @@
+import _ from "lodash";
 import { resolve } from 'path';
 import { readFileSync } from 'fs';
 import { createHmac } from 'crypto';
@@ -87,8 +88,17 @@ export function buildConfigFromShip(ship, organization, secret) {
 
   const mappings = ['Lead', 'Contact'].reduce((maps, type) => {
     const fieldsList = ship.private_settings[`${type.toLowerCase()}s_mapping`];
-    // const fetchFields = ship.private_settings[`fetch_${type.toLowerCase()}_fields`] || [];
-    const fetchFields = getFieldsToHull(type)
+    // Fetch all default salesforce attributes
+    const defaultFetchFields = getFieldsToHull(type);
+    // Fetch custom salesforce attributes defined
+    const settingsFetchFields = (ship.private_settings[`fetch_${type.toLowerCase()}_fields`] || []).reduce(function(result, field) {
+      // Do not map custom attributes to hull top level properties
+      result[field] = null;
+      return result;
+    }, {});
+
+    const fetchFields = _.merge(defaultFetchFields, settingsFetchFields);
+
     maps[type] = { type, fetchFields, fields: {} };
     if (fieldsList && fieldsList.length > 0) {
       const fields = fieldsList.reduce((ff, field) => {
