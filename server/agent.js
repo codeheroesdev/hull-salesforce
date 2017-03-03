@@ -248,9 +248,9 @@ export default class Agent extends EventEmitter {
           const traits = _.reduce(fields, (t, k) => {
             // Adds salesforce attribute
             t[source + '/' + toUnderscore(k)] = rec[k];
-            // Adds hull top level property if the salesforce attribute can be mapped
+            // Adds hull top level property if the salesforce attribute can be mapped 
             if (mappings[type].fetchFields && !_.isNil(mappings[type].fetchFields[k])) {
-              t[mappings[type].fetchFields[k]] = rec[k];
+              t[mappings[type].fetchFields[k]] = { value: rec[k], operation: "setIfNull" };
             }
             return t;
           }, {});
