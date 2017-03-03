@@ -1,12 +1,15 @@
 import _ from "lodash";
-import { resolve } from 'path';
-import { readFileSync } from 'fs';
-import { createHmac } from 'crypto';
-import Hull from 'hull';
-import getFieldsToHull from './mapping_data';
+import { resolve } from "path";
+import { readFileSync } from "fs";
+import { createHmac } from "crypto";
+import Hull from "hull";
+import { getFieldsToHullTopLevel } from "./mapping_data";
 
-export function config(env={}, options={}) {
-  var defaults = {
+/**
+ * Deprecated
+ */
+export function config(env = {}, options = {}) {
+  const defaults = {
     hostSecret: env.SECRET || "BOOM",
     hull: {
       id: env.HULL_APP_ID,
@@ -15,44 +18,45 @@ export function config(env={}, options={}) {
     },
     salesforce: {
       oauth2: {
-        clientId : process.env.CLIENT_ID,
-        clientSecret : process.env.CLIENT_SECRET
+        clientId: process.env.CLIENT_ID,
+        clientSecret: process.env.CLIENT_SECRET
       }
     },
     sync: {
-      fetchRange: '1h',
+      fetchRange: "1h",
       batchSize: 100
     },
     mappings: {
       Lead: {
-        type: 'Lead',
+        type: "Lead",
         fields: {
-          LeadSource:     'main_identity',
-          Description:    'description',
-          Email:          'email',
-          FirstName:      { key: 'first_name', defaultValue: '[Unknown]' },
-          LastName:       { key: 'last_name', defaultValue: '[Unknown]' },
-          Company:        { key: 'company', defaultValue: '[Unknown]' },
-          Street:         { key: 'address_street' },
-          City:           { key: 'address_city' },
-          Country:        { key: 'address_country' },
-          State:          { key: 'address_state' },
-          PostalCode:     { key: 'address_postal_code' },
-          Phone:          { key: 'phone' }
+          LeadSource: "main_identity",
+          Description: "description",
+          Email: "email",
+          FirstName: { key: "first_name", defaultValue: "[Unknown]" },
+          LastName: { key: "last_name", defaultValue: "[Unknown]" },
+          Company: { key: "company", defaultValue: "[Unknown]" },
+          Street: { key: "address_street" },
+          City: { key: "address_city" },
+          Country: { key: "address_country" },
+          State: { key: "address_state" },
+          PostalCode: { key: "address_postal_code" },
+          Phone: { key: "phone" }
         }
       },
       Contact: {
-        type: 'Contact',
+        type: "Contact",
         fields: {
-          Email: 'email',
-          FirstName: 'first_name',
-          LastName: 'last_name'
+          Email: "email",
+          FirstName: "first_name",
+          LastName: "last_name"
         }
       }
     }
   };
 
-  var cfg = {}, filename = options.f || env.CONFIG_FILE;
+  let cfg = {};
+  const filename = options.f || env.CONFIG_FILE;
 
   if (filename) {
     cfg = JSON.parse(readFileSync(resolve(filename)));
@@ -65,9 +69,9 @@ export function config(env={}, options={}) {
 }
 
 function generateShipSecret(shipId, secret) {
-  return createHmac('sha256', secret)
+  return createHmac("sha256", secret)
           .update(shipId)
-          .digest('hex');
+          .digest("hex");
 }
 
 function getHullClient(organization, id, secret) {
@@ -75,7 +79,6 @@ function getHullClient(organization, id, secret) {
 }
 
 export function buildConfigFromShip(ship, organization, secret) {
-
   const {
     access_token,
     refresh_token,
@@ -86,16 +89,17 @@ export function buildConfigFromShip(ship, organization, secret) {
     salesforce_login_url
   } = ship.private_settings;
 
-  const mappings = ['Lead', 'Contact'].reduce((maps, type) => {
+  const mappings = ["Lead", "Contact"].reduce((maps, type) => {
     const fieldsList = ship.private_settings[`${type.toLowerCase()}s_mapping`];
     // Fetch all default salesforce attributes
-    const defaultFetchFields = getFieldsToHull(type);
+    const defaultFetchFields = getFieldsToHullTopLevel(type);
     // Fetch custom salesforce attributes defined
-    const settingsFetchFields = (ship.private_settings[`fetch_${type.toLowerCase()}_fields`] || []).reduce(function(result, field) {
-      // Do not map custom attributes to hull top level properties
-      result[field] = null;
-      return result;
-    }, {});
+    const settingsFetchFields = (ship.private_settings[`fetch_${type.toLowerCase()}_fields`] || [])
+      .reduce(function setNullValue(result, field) {
+        // Do not map custom attributes to hull top level properties
+        result[field] = null;
+        return result;
+      }, {});
 
     const fetchFields = _.merge(defaultFetchFields, settingsFetchFields);
 
@@ -129,7 +133,7 @@ export function buildConfigFromShip(ship, organization, secret) {
       refreshToken: refresh_token,
       instanceUrl: instance_url
     };
-  } else if ( salesforce_login && salesforce_password) {
+  } else if (salesforce_login && salesforce_password) {
     credentials = {
       login: salesforce_login,
       password: salesforce_password,
@@ -138,8 +142,8 @@ export function buildConfigFromShip(ship, organization, secret) {
   }
 
   const oauth2 = {
-    clientId : process.env.CLIENT_ID,
-    clientSecret : process.env.CLIENT_SECRET
+    clientId: process.env.CLIENT_ID,
+    clientSecret: process.env.CLIENT_SECRET
   };
 
   return {
@@ -147,22 +151,20 @@ export function buildConfigFromShip(ship, organization, secret) {
     salesforce: { ...credentials, oauth2 },
     sync: {
       segmentIds: synchronized_segments || [],
-      fetchRange: '3d',
+      fetchRange: "3d",
       batchSize: 200
     },
     mappings
-  }
+  };
 }
-
 
 export function getShipConfig(orgUrl, shipId, secret) {
   const appSecret = secret || generateShipSecret(shipId, process.env.SECRET);
   const hull = getHullClient(orgUrl, shipId, appSecret);
-  return hull.get(shipId).then(ship => {
+  return hull.get(shipId).then((ship) => {
     if (!ship.private_settings) {
       throw new Error("Invalid hull credentials");
     }
     return buildConfigFromShip(ship, orgUrl, appSecret);
   });
 }
-
