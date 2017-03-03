@@ -3,7 +3,7 @@ import { resolve } from 'path';
 import { readFileSync } from 'fs';
 import { createHmac } from 'crypto';
 import Hull from 'hull';
-import { getFieldsToHull } from './mapping_data';
+import getFieldsToHull from './mapping_data';
 
 export function config(env={}, options={}) {
   var defaults = {
