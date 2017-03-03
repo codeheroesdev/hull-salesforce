@@ -1,26 +1,30 @@
-import _ from 'lodash';
-import Hull from 'hull';
-import { SF } from './sf';
-import { syncRecords } from './sync';
-import Connection from './connection';
-import { getShipConfig, buildConfigFromShip } from './config';
-import { EventEmitter } from 'events';
-import jsforce from 'jsforce';
-import cacheManager from 'cache-manager';
+import _ from "lodash";
+import Hull from "hull";
+import { EventEmitter } from "events";
+import cacheManager from "cache-manager";
+import { SF } from "./sf";
+import { syncRecords } from "./sync";
+import Connection from "./connection";
+import { buildConfigFromShip } from "./config";
+import { getFieldsMappingToHullTraits } from "./mapping_data";
 
-function log(a,b,c) {
+function log(a, b, c) {
   if (process.env.DEBUG) {
-    console.log(a,b,c)
+    console.log(a, b, c);
   }
 }
 
 function toUnderscore(str) {
   return str
-    .replace(/([A-Z])/g, (c) => `_${c.toLowerCase()}`)
-    .replace(/^_/, '');
+    .replace(/([A-Z])/g, c => `_${c.toLowerCase()}`)
+    .replace(/^_/, "");
 }
 
-const Cache = cacheManager.caching({ store: 'memory', max: 100, ttl: 60 });
+function trait_name(source, field, mapping) {
+  return `${source}/${_.get(mapping, field, toUnderscore(field))}`;
+}
+
+const Cache = cacheManager.caching({ store: "memory", max: 100, ttl: 60 });
 
 export default class Agent extends EventEmitter {
 
@@ -55,7 +59,7 @@ export default class Agent extends EventEmitter {
     const { organization, secret } = hull.configuration();
     const config = buildConfigFromShip(ship, organization, secret);
     const agent = new Agent(config);
-    const last_sync_at = parseInt(_.get(ship, 'settings.last_sync_at'), 10);
+    const last_sync_at = parseInt(_.get(ship, "settings.last_sync_at"), 10);
     const since = new Date(last_sync_at - 60000);
     if (since && since.getYear() === new Date().getYear()) {
       options.since = since;
@@ -78,7 +82,7 @@ export default class Agent extends EventEmitter {
       return Promise.resolve({});
     }
     const { organization, secret } = hull.configuration();
-    const cacheKey = [ship.id, ship.updated_at, secret].join('/');
+    const cacheKey = [ship.id, ship.updated_at, secret].join("/");
     return Cache.wrap(cacheKey, () => {
       const config = buildConfigFromShip(ship, organization, secret);
       const agent = new Agent(config);
@@ -92,7 +96,7 @@ export default class Agent extends EventEmitter {
     super();
     this.pages = [];
     this.config = config;
-    this.status = 'pending';
+    this.status = "pending";
   }
 
   connect() {
@@ -113,40 +117,39 @@ export default class Agent extends EventEmitter {
     if (this._connect) return this._connect;
     // Configure with Salesforce and Hull credentials
 
-    this.on('error', (err) => {
-      console.warn('Sync Error ', err);
+    this.on("error", (err) => {
+      console.warn("Sync Error ", err);
     });
 
-    let connect = new Promise((resolve, reject) => {
+    const connect = new Promise((resolve, reject) => {
       // Salesforce
-      let { login, password, loginUrl } = this.config.salesforce;
-      var conn = new Connection({ loginUrl : loginUrl });
+      const { login, password, loginUrl } = this.config.salesforce;
+      const conn = new Connection({ loginUrl });
       conn.setShipId(this.config.hull.id);
       if (login && password) {
         conn.login(login, password, (err, userInfo) => {
           if (err) {
-            this.emit('error', err);
+            this.emit("error", err);
             reject(err);
           } else {
-            this.emit('connect', userInfo);
+            this.emit("connect", userInfo);
             this.sf = new SF(conn);
             this.userInfo = userInfo;
             resolve(conn);
           }
         });
       } else {
-        reject(new Error('Salesforce credentials missing'));
+        reject(new Error("Salesforce credentials missing"));
       }
 
       // Hull
       this.hull = new Hull(this.config.hull);
-
     });
 
     connect.catch((err) => {
-      console.log('Error establishing connection with Salesforce: for ', login, err)
+      console.log("Error establishing connection with Salesforce: for ", login, err);
       return err;
-    })
+    });
 
     this._connect = connect;
     return connect;
@@ -187,18 +190,18 @@ export default class Agent extends EventEmitter {
   getFieldsSchema() {
     const { mappings } = this.config;
     return Promise.all(_.map(mappings, ({ type }) => {
-      return this.sf.getFieldsList(type).then(fields => {
+      return this.sf.getFieldsList(type).then((fields) => {
         return { type: type.toLowerCase(), fields };
       });
-    })).then(fieldsByType => {
+    })).then((fieldsByType) => {
       return fieldsByType.reduce((schema, { fields, type }) => {
         return { ...schema,
-          [`${type}`]: _.map(fields, 'name').sort(),
-          [`${type}_updateable`]: _.map(_.filter(fields, { updateable: true }), 'name').sort(),
-          [`${type}_custom`]: _.map(_.filter(fields, { custom: true }), 'name').sort()
+          [`${type}`]: _.map(fields, "name").sort(),
+          [`${type}_updateable`]: _.map(_.filter(fields, { updateable: true }), "name").sort(),
+          [`${type}_custom`]: _.map(_.filter(fields, { custom: true }), "name").sort()
         };
       }, {});
-    })
+    });
   }
 
   fetchAll() {
@@ -207,17 +210,16 @@ export default class Agent extends EventEmitter {
       if (fields && fields.length > 0) {
         return this.sf.getAllRecords({ type, fields }, (record = {}) => {
           const source = `salesforce_${type.toLowerCase()}`;
-          const traits = _.reduce(fields, (t,k) => {
+          const traits = _.reduce(fields, (t, k) => {
             const val = record[k];
             if (val != null) {
               return { ...t, [`${source}/${toUnderscore(k)}`]: val };
             } else {
               return t;
             }
-
           }, {
-            first_name: { operation: 'setIfNull', value: record.FirstName },
-            last_name:  { operation: 'setIfNull', value: record.LastName },
+            first_name: { operation: "setIfNull", value: record.FirstName },
+            last_name: { operation: "setIfNull", value: record.LastName },
             [`${source}/id`]: record.Id
           });
           if (!_.isEmpty(traits)) {
@@ -227,7 +229,7 @@ export default class Agent extends EventEmitter {
           }
         });
       }
-    }))
+    }));
   }
 
   fetchChanges(options = {}) {
@@ -238,14 +240,18 @@ export default class Agent extends EventEmitter {
         return this.sf.getUpdatedRecords(type, { ...options, fields });
       }
       return { type, fields: fetchFields, records: [] };
-    })).then(changes => {
+    })).then((changes) => {
+      const fieldsMappingToTraits = ["Lead", "Contact"].reduce((result, type) => {
+        result[type] = getFieldsMappingToHullTraits(type);
+        return result;
+      }, {});
       changes.map(({ type, records, fields }) => {
-        records.map(rec => {
+        records.map((rec) => {
           const source = `salesforce_${type.toLowerCase()}`;
           const traits = _.reduce(fields, (t, k) => {
             // Adds salesforce attribute
-            t[source + '/' + toUnderscore(k)] = rec[k];
-            // Adds hull top level property if the salesforce attribute can be mapped 
+            t[trait_name(source, k, fieldsMappingToTraits)] = rec[k];
+            // Adds hull top level property if the salesforce attribute can be mapped
             if (mappings[type].fetchFields && !_.isNil(mappings[type].fetchFields[k])) {
               t[mappings[type].fetchFields[k]] = { value: rec[k], operation: "setIfNull" };
             }
@@ -264,13 +270,13 @@ export default class Agent extends EventEmitter {
 
   syncUsers(users) {
     const mappings = this.config.mappings;
-    let emails = users.map((u)=> u.email);
-    let sfRecords = this.sf.searchEmails(emails, mappings);
-    return sfRecords.then((searchResults)=> {
-      let recordsByType = syncRecords(searchResults, users, { mappings });
+    const emails = users.map(u => u.email);
+    const sfRecords = this.sf.searchEmails(emails, mappings);
+    return sfRecords.then((searchResults) => {
+      const recordsByType = syncRecords(searchResults, users, { mappings });
 
-      var upsertResults = ['Lead', 'Contact'].map((recordType) => {
-        let records = recordsByType[recordType];
+      const upsertResults = ["Lead", "Contact"].map((recordType) => {
+        const records = recordsByType[recordType];
         if (records && records.length > 0) {
           return this.sf.upsert(recordType, records).then((results) => {
             return { recordType, results, records };
@@ -283,7 +289,7 @@ export default class Agent extends EventEmitter {
           if (r && r.recordType) {
             rr[r.recordType] = r;
           }
-          return rr
+          return rr;
         }, {});
       });
     });
