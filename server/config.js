@@ -78,18 +78,8 @@ function getHullClient(organization, id, secret) {
   return new Hull({ organization, id, secret });
 }
 
-export function buildConfigFromShip(ship, organization, secret) {
-  const {
-    access_token,
-    refresh_token,
-    instance_url,
-    synchronized_segments,
-    salesforce_login,
-    salesforce_password,
-    salesforce_login_url
-  } = ship.private_settings;
-
-  const mappings = ["Lead", "Contact"].reduce((maps, type) => {
+function updateFieldsMapping(ship) {
+  return (maps, type) => {
     const fieldsList = ship.private_settings[`${type.toLowerCase()}s_mapping`];
     // Fetch all default salesforce attributes
     const defaultFetchFields = getFieldsToHullTopLevel(type);
@@ -123,7 +113,21 @@ export function buildConfigFromShip(ship, organization, secret) {
     }
 
     return maps;
-  }, {});
+  };
+}
+
+export function buildConfigFromShip(ship, organization, secret) {
+  const {
+    access_token,
+    refresh_token,
+    instance_url,
+    synchronized_segments,
+    salesforce_login,
+    salesforce_password,
+    salesforce_login_url
+  } = ship.private_settings;
+
+  const mappings = ["Lead", "Contact"].reduce(updateFieldsMapping(ship), {});
 
   let credentials = {};
 
