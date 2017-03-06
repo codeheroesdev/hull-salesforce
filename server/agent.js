@@ -68,8 +68,8 @@ export default class Agent extends EventEmitter {
     return agent.connect().then(() => {
       return agent.fetchChanges(options).then(() => {
         hull.get(ship.id).then(({ settings }) => {
-          hull.put(ship.id, { settings: { ...settings,
-            last_sync_at: new Date().getTime()
+          hull.put(ship.id, { settings: {
+            ...settings, last_sync_at: new Date().getTime()
           } });
         });
       });
