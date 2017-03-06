@@ -3,7 +3,7 @@ import { resolve } from "path";
 import { readFileSync } from "fs";
 import { createHmac } from "crypto";
 import Hull from "hull";
-import { getFieldsToHullTopLevel } from "./mapping_data";
+import { getFieldsToHullTopLevel } from "./mapping-data";
 
 /**
  * Deprecated
@@ -78,42 +78,37 @@ function getHullClient(organization, id, secret) {
   return new Hull({ organization, id, secret });
 }
 
-function updateFieldsMapping(ship) {
-  return (maps, type) => {
-    const fieldsList = ship.private_settings[`${type.toLowerCase()}s_mapping`];
-    // Fetch all default salesforce attributes
-    const defaultFetchFields = getFieldsToHullTopLevel(type);
-    // Fetch custom salesforce attributes defined
-    const settingsFetchFields = (ship.private_settings[`fetch_${type.toLowerCase()}_fields`] || [])
-      .reduce(function setNullValue(result, field) {
-        // Do not map custom attributes to hull top level properties
-        result[field] = null;
-        return result;
-      }, {});
+function getFieldsMapping(ship, type) {
+  const fieldsList = ship.private_settings[`${type.toLowerCase()}s_mapping`];
+  // Fetch all default salesforce attributes
+  const defaultFetchFields = getFieldsToHullTopLevel(type);
+  // Fetch custom salesforce attributes defined
+  const settingsFetchFields = (ship.private_settings[`fetch_${type.toLowerCase()}_fields`] || [])
+    .reduce(function setNullValue(result, field) {
+      // Do not map custom attributes to hull top level properties
+      result[field] = null;
+      return result;
+    }, {});
 
-    const fetchFields = _.merge(defaultFetchFields, settingsFetchFields);
+  const fetchFields = _.merge(defaultFetchFields, settingsFetchFields);
 
-    maps[type] = { type, fetchFields, fields: {} };
-    if (fieldsList && fieldsList.length > 0) {
-      const fields = fieldsList.reduce((ff, field) => {
-        const f = { key: field.hull_field_name, overwrite: !!field.overwrite };
-        if (field.default_value && field.default_value.length > 0) {
-          f.defaultValue = field.default_value;
-        }
+  const fields = {};
+  if (fieldsList && fieldsList.length > 0) {
+    fieldsList.forEach((field) => {
+      const f = { key: field.hull_field_name, overwrite: !!field.overwrite };
+      if (field.default_value && field.default_value.length > 0) {
+        f.defaultValue = field.default_value;
+      }
 
-        if (field.tpl && field.tpl.length > 0) {
-          f.tpl = field.tpl;
-        }
+      if (field.tpl && field.tpl.length > 0) {
+        f.tpl = field.tpl;
+      }
 
-        ff[field.salesforce_field_name] = f;
-        return ff;
-      }, {});
+      fields[field.salesforce_field_name] = f;
+    });
+  }
 
-      maps[type] = { type, fields, fetchFields };
-    }
-
-    return maps;
-  };
+  return { type, fetchFields, fields };
 }
 
 export function buildConfigFromShip(ship, organization, secret) {
@@ -127,7 +122,10 @@ export function buildConfigFromShip(ship, organization, secret) {
     salesforce_login_url
   } = ship.private_settings;
 
-  const mappings = ["Lead", "Contact"].reduce(updateFieldsMapping(ship), {});
+  const mappings = ["Lead", "Contact"].reduce((memo, type) => {
+    memo[type] = getFieldsMapping(ship, type);
+    return memo;
+  }, {});
 
   let credentials = {};
 
