@@ -10,7 +10,7 @@ export default class BatchSyncHandler {
 
   static exit() {
     if (!BatchSyncHandler.exiting) {
-      const exiting = Promise.all(_.map(HANDLERS, (h) => h.flush()));
+      const exiting = Promise.all(_.map(HANDLERS, h => h.flush()));
       BatchSyncHandler.exiting = exiting;
       return exiting;
     }
@@ -26,14 +26,13 @@ export default class BatchSyncHandler {
       return BatchSyncHandler
         .getHandler({ hull, ship, options })
         .add(message, { hull, ship });
-    } else {
-      const err = new Error("Exiting...");
-      err.status = 503;
-      return Promise.reject(err);
     }
+    const err = new Error("Exiting...");
+    err.status = 503;
+    return Promise.reject(err);
   }
 
-  constructor({ hull, ship, options={} }) {
+  constructor({ hull, ship, options = {} }) {
     this.hull = hull;
     this.ship = ship;
     this.options = {
@@ -53,7 +52,7 @@ export default class BatchSyncHandler {
   }
 
   debugStats() {
-    this.hull.logger.debug('batch.stats', this.stats);
+    this.hull.logger.info("batch.stats", this.stats);
   }
 
   log(msg, data) {

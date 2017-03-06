@@ -1,13 +1,14 @@
 if (process.env.NEW_RELIC_LICENSE_KEY) {
-  console.warn('starting newrelic with key: ', process.env.NEW_RELIC_LICENSE_KEY);
-  require('newrelic');
+  console.warn("starting newrelic with key: ", process.env.NEW_RELIC_LICENSE_KEY);
+  require("newrelic");
 }
 
-var Server = require('./server').default;
-var config = require('./config').config(process.env);
-var PORT = process.env.PORT || 8082;
+const Server = require("./server").default;
+const config = require("./config").config(process.env);
 
-console.warn("Starting on PORT " + PORT);
+const PORT = process.env.PORT || 8082;
+
+console.warn(`Starting on PORT ${PORT}`);
 const server = Server(config);
 server.listen(PORT);
 
