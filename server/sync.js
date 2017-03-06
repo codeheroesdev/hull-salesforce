@@ -1,17 +1,16 @@
-import Hogan from 'hogan.js';
-import _ from 'lodash';
+import Hogan from "hogan.js";
+import _ from "lodash";
 export function syncRecords(sfObjectsByEmail, users, options) {
-  return users.reduce((records, user)=> {
-
-    let sfObjects = sfObjectsByEmail[user.email] || {};
+  return users.reduce((records, user) => {
+    const sfObjects = sfObjectsByEmail[user.email] || {};
 
     // If a Contact with this email is known, let's update it, otherwise it's a Lead.
 
-    let objectType = sfObjects.Contact ? 'Contact' : 'Lead';
-    let mapping = options.mappings[objectType];
+    const objectType = sfObjects.Contact ? "Contact" : "Lead";
+    const mapping = options.mappings[objectType];
 
     if (mapping) {
-      let record = getUpdatedFields(user, sfObjects[objectType], mapping);
+      const record = getUpdatedFields(user, sfObjects[objectType], mapping);
       if (record) {
         records[objectType].push(record);
       }
@@ -23,21 +22,19 @@ export function syncRecords(sfObjectsByEmail, users, options) {
 
 
 export function getUpdatedFields(user, sfObject, mapping) {
-  let fields = mapping.fields;
-  let fieldNames = Object.keys(fields);
-
-  let record = fieldNames.reduce((mapped, f) => {
-    let val,
-        // orig: current value of the SF Object
-        orig = sfObject && sfObject[f],
-        // def: Field Definition
-        def = fields[f],
-        // Apply defaultValue only if orig is undefined
-        defaultValue = orig ? undefined : (def && def.defaultValue);
+  const fields = mapping.fields;
+  const fieldNames = Object.keys(fields);
+  const record = fieldNames.reduce((mapped, f) => {
+    let val;
+    // orig: current value of the SF Object
+    const orig = sfObject && sfObject[f];
+    // def: Field Definition
+    const def = fields[f];
+    // Apply defaultValue only if orig is undefined
+    const defaultValue = orig ? undefined : (def && def.defaultValue);
 
     if (orig === undefined || orig === null || orig === (def && def.defaultValue) || def.overwrite === true) {
-
-      if (typeof(def) === 'string') {
+      if (typeof (def) === "string") {
         val = user[def];
       } else if (def.key) {
         val = _.get(user, def.key);
@@ -63,4 +60,3 @@ export function getUpdatedFields(user, sfObject, mapping) {
     return record;
   }
 }
-

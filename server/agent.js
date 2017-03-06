@@ -71,8 +71,8 @@ export default class Agent extends EventEmitter {
         hull.get(ship.id).then(({ settings }) => {
           hull.put(ship.id, { settings: {
             ...settings, last_sync_at
-          }});
-        })
+          } });
+        });
       });
     });
   }
