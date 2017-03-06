@@ -245,6 +245,7 @@ export default class Agent extends EventEmitter {
         result[type] = getFieldsMappingToHullTraits(type);
         return result;
       }, {});
+      const promises = [];
       changes.map(({ type, records, fields }) => {
         records.map((rec) => {
           const source = `salesforce_${type.toLowerCase()}`;
@@ -258,13 +259,13 @@ export default class Agent extends EventEmitter {
             return t;
           }, {});
           if (!_.isEmpty(traits)) {
-            return this.hull
+            promises.push(this.hull
               .as({ email: rec.Email })
-              .traits(traits);
+              .traits(traits));
           }
         });
       });
-      return { changes };
+      return Promise.all(promises).then(() => { return { changes }; });
     });
   }
 
