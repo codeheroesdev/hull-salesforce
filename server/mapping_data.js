@@ -68,10 +68,24 @@ const DEFAULT_MAPPING = {
   ]
 };
 
+/**
+ * Returns a mapping between Salesforce attributes and Hull top level
+ * properties for the given Salesforce record type.
+ * @param {String} type Salesforce record type (Lead | Contact).
+ * @return {Object} Salesforce attributes names to Hull top level properties
+ *                  names.
+ */
 export function getFieldsToHullTopLevel(type) {
   return _.mapValues(_.keyBy(_.get(DEFAULT_MAPPING, type, []), "salesforce_field_name"), mapping => mapping.hull_top_level_field_name);
 }
 
+/**
+ * Returns a mapping between Salesforce attributes and Salesforce traits into
+ * Hull for the given Salesforce record type.
+ * @param {String} type Salesforce record type (Lead | Contact).
+ * @return {Object} Salesforce attributes names to Salesforce traits names in
+ *                  Hull (without "salesforce_{lead|contact}/" prefix).
+ */
 export function getFieldsMappingToHullTraits(type) {
   return _.mapValues(_.keyBy(_.get(DEFAULT_MAPPING, type, []), "salesforce_field_name"), mapping => mapping.hull_salesforce_field_name);
 }
