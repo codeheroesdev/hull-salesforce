@@ -6,7 +6,6 @@ import { SF } from "./sf";
 import { syncRecords } from "./sync";
 import Connection from "./connection";
 import { buildConfigFromShip } from "./config";
-import { getFieldsMappingToHullTraits } from "./mapping-data";
 
 function log(a, b, c) {
   if (process.env.DEBUG) {
@@ -91,7 +90,7 @@ export default class Agent extends EventEmitter {
     });
   }
 
-  constructor(config={}) {
+  constructor(config = {}) {
     super();
     this.pages = [];
     this.config = config;
@@ -273,16 +272,15 @@ export default class Agent extends EventEmitter {
     const sfRecords = this.sf.searchEmails(emails, mappings);
     return sfRecords.then((searchResults) => {
       const recordsByType = syncRecords(searchResults, users, { mappings });
-
       const upsertResults = ["Lead", "Contact"].map((recordType) => {
         const records = recordsByType[recordType];
         if (records && records.length > 0) {
           return this.sf.upsert(recordType, records).then((results) => {
+            _.map(records, record => this.hull.logger.info("outcoming.user", record));
             return { recordType, results, records };
           });
         }
       });
-
       return Promise.all(upsertResults).then((results) => {
         return results.reduce((rr, r) => {
           if (r && r.recordType) {
