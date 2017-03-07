@@ -1,5 +1,6 @@
 import jsforce from "jsforce";
 import librato from "librato-node";
+import Hull from "hull";
 
 function increment(metric, value, options) {
   try {
@@ -7,7 +8,7 @@ function increment(metric, value, options) {
       librato.increment(metric, value, options);
     }
   } catch (err) {
-    // console.warn("Librato error", err)
+    // Hull.logger.warn("Librato error", err)
   }
 }
 
@@ -17,7 +18,7 @@ function measure(metric, value, options) {
       librato.measure(metric, value, options);
     }
   } catch (err) {
-    // console.warn("Librato error", err)
+    // Hull.logger.warn("Librato error", err)
   }
 }
 

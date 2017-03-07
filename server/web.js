@@ -1,5 +1,7 @@
+import Hull from "hull";
+
 if (process.env.NEW_RELIC_LICENSE_KEY) {
-  console.warn("starting newrelic with key: ", process.env.NEW_RELIC_LICENSE_KEY);
+  Hull.logger.warn("starting newrelic with key: ", process.env.NEW_RELIC_LICENSE_KEY);
   require("newrelic");
 }
 
@@ -8,17 +10,17 @@ const config = require("./config").config(process.env);
 
 const PORT = process.env.PORT || 8082;
 
-console.warn(`Starting on PORT ${PORT}`);
+Hull.logger.warn(`Starting on PORT ${PORT}`);
 const server = Server(config);
 server.listen(PORT);
 
 function exitNow() {
-  console.warn("Exiting now !");
+  Hull.logger.warn("Exiting now !");
   process.exit();
 }
 
 function handleExit() {
-  console.log("Exiting... waiting 30 seconds workers to flush");
+  Hull.logger.log("Exiting... waiting 30 seconds workers to flush");
   setTimeout(exitNow, 30000);
   server.exit().then(exitNow);
 }

@@ -2,9 +2,8 @@ import _ from "lodash";
 import express from "express";
 import cors from "cors";
 import path from "path";
-import { NotifHandler, BatchHandler, Middleware, OAuthHandler } from "hull";
+import { Hull, NotifHandler, BatchHandler, Middleware, OAuthHandler } from "hull";
 import { Strategy } from "passport-forcedotcom";
-import bodyParser from "body-parser";
 import librato from "librato-node";
 import { renderFile } from "ejs";
 
@@ -123,10 +122,10 @@ export default function Server({ hostSecret }) {
     hostSecret,
     groupTraits: false,
     onSusbscribe(message, context) {
-      console.warn("Hello new subscriber !", { message, context });
+      Hull.logger.warn("Hello new subscriber !", { message, context });
     },
     onError(message, status) {
-      console.warn("Error", status, message);
+      Hull.logger.warn("Error", status, message);
     },
     handlers: {
       "user:update": ({ message }, { ship, hull }) => {

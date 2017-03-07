@@ -41,7 +41,7 @@ export default class BatchSyncHandler {
       ...options
     };
     this.metric = (metric, value = 1) => {
-      console.warn('metric', `bulk.${metric}`, value);
+      this.hull.logger.warn("metric", `bulk.${metric}`, value);
     };
 
     this.users = {};
@@ -53,10 +53,6 @@ export default class BatchSyncHandler {
 
   debugStats() {
     this.hull.logger.info("batch.stats", this.stats);
-  }
-
-  log(msg, data) {
-    console.log(msg, JSON.stringify(data));
   }
 
   add(message, { hull, ship }) {

@@ -1,5 +1,6 @@
 import _ from "lodash";
 import Promise from "bluebird";
+import Hull from "hull";
 
 import librato from "librato-node";
 
@@ -9,7 +10,7 @@ function increment(metric, value, options) {
       librato.increment(metric, value, options);
     }
   } catch(err) {
-    // console.warn('Librato error', err)
+    // Hull.logger.warn('Librato error', err)
   }
 }
 
@@ -18,13 +19,6 @@ const RESERVED_CHARACTERS_REGEXP = /\?|\&|\||\!|\{|\}|\[|\]|\(|\)|\^|\~|\*|\:|\+
 function escapeSOSL(str) {
   return str.replace(RESERVED_CHARACTERS_REGEXP, c => `\\${c}`);
 }
-
-function log(a, b, c) {
-  if (process.env.DEBUG) {
-    console.log(a, b, c);
-  }
-}
-
 
 export class SF {
   constructor(connection, hullClient) {
@@ -49,7 +43,6 @@ export class SF {
       return this.connection.soap._invoke("upsert", message, false, (err, res) => {
         if (err) {
           increment("salesforce:errors", 1, { source: this.connection._shipId });
-          log("upsert error", JSON.stringify({ err, res, externalIDFieldName, input }));
 
           let errors = err;
 
@@ -64,15 +57,12 @@ export class SF {
             log_placement: "_upsertSoap.1"
           });
 
-          log("upsert error", JSON.stringify({ err, res, externalIDFieldName, input }));
           reject(err);
         } else {
-          console.log("upsert success", JSON.stringify({ err, res, externalIDFieldName, input }));
           if (_.isArray(res)) {
             res.map((r, idx) => {
               increment("salesforce:errors", 1, { source: this.connection._shipId });
               if (r.success !== "true") {
-                console.log("upsert error", JSON.stringify({ res: r, input: input[idx] }));
                 this.logger.error("outgoing.user.error", {
                   errors: r.errors,
                   email: input[idx].Email,
@@ -107,11 +97,10 @@ export class SF {
 
   _upsertBulk(type, input = [], extIdField = "Email") {
     const SObject = this.connection.sobject(type);
-    log("upsert", JSON.stringify({ type, records: input.length }));
+    Hull.logger.log("upsert", JSON.stringify({ type, records: input.length }));
     return new Promise((resolve, reject) => {
       return SObject.upsertBulk(input, extIdField, (err, res) => {
         if (err) {
-          console.log("upsert error", JSON.stringify({ err, res, extIdField, input }));
           this.logger.error("outgoing.user.error", {
             email: input[0].Email,
             errors: err,
@@ -124,7 +113,6 @@ export class SF {
             res.map((r, idx) => {
               increment("salesforce:errors", 1, { source: this.connection._shipId });
               if (r.success.toString() !== "true") {
-                console.log("bulk upsert error", JSON.stringify({ res: r, input: input[idx] }));
                 this.logger.error("outgoing.user.error", {
                   email: input[idx].Email,
                   errors: r.errors,
@@ -188,7 +176,7 @@ export class SF {
         .on("end", () => {
           resolve({ query, type, fields });
         })
-        .on("error", function (err) {
+        .on("error", (err) => {
           reject(err);
         })
         .run({ autoFetch: true });
@@ -236,10 +224,10 @@ export class SF {
 
     const Returning = Object.keys(mappings).reduce((ret, type) => {
       const fieldsList = _.uniq(["Id"].concat(_.compact(Object.keys(mappings[type].fields || {}))));
-      ret.push(`${type}(${fieldsList.join(',')})`);
+      ret.push(`${type}(${fieldsList.join(",")})`);
       return ret;
     }, []);
-    const qry = `FIND {${findEmails.join(' OR ')}} IN Email FIELDS RETURNING ${Returning.join(', ')}`;
+    const qry = `FIND {${findEmails.join(" OR ")}} IN Email FIELDS RETURNING ${Returning.join(', ')}`;
 
     return qry;
   }
