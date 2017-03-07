@@ -153,8 +153,8 @@ export default class Agent extends EventEmitter {
     const conn = new Connection(this.config.salesforce);
     conn.setShipId(shipId);
 
-    this.sf = new SF(conn);
     this.hull = new Hull(this.config.hull);
+    this.sf = new SF(conn, this.hull.logger);
     this._connect = Promise.resolve(conn);
 
     conn.on("refresh", (access_token, res) => {
