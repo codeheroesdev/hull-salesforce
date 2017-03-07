@@ -16,7 +16,7 @@ function increment(metric, value, options) {
 const RESERVED_CHARACTERS_REGEXP = /\?|\&|\||\!|\{|\}|\[|\]|\(|\)|\^|\~|\*|\:|\+|\-|\"|\'/ig;
 
 function escapeSOSL(str) {
-  return str.replace(RESERVED_CHARACTERS_REGEXP, c => "\\${c}");
+  return str.replace(RESERVED_CHARACTERS_REGEXP, c => `\\${c}`);
 }
 
 function log(a, b, c) {
@@ -159,7 +159,6 @@ export class SF {
 
   getFieldsList(type) {
     return this.exec("describe", type).then((meta) => {
-      const keys = [];
       return meta.fields.reduce((fields, f) => {
         return { ...fields, [f.name]: f };
       }, {});
@@ -247,7 +246,7 @@ export class SF {
 
   exec(fn) {
     const args = [].slice.call(arguments, 1);
-    return new Promise((resolve, reject)=> {
+    return new Promise((resolve, reject) => {
       this.connection[fn].apply(this.connection, [...args, (err, res) => {
         err ? reject(err) : resolve(res);
       }]);
@@ -259,7 +258,7 @@ export class SF {
 
     const chunks = _.chunk(emails, 100);
     const searches = chunks.map(
-      chunk => this.exec('search', this.searchEmailsQuery(chunk, mappings))
+      chunk => this.exec("search", this.searchEmailsQuery(chunk, mappings))
     );
 
     return Promise.all(searches).then((results) => {

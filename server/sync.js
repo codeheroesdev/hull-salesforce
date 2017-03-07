@@ -5,7 +5,6 @@ export function syncRecords(sfObjectsByEmail, users, options) {
     const sfObjects = sfObjectsByEmail[user.email] || {};
 
     // If a Contact with this email is known, let's update it, otherwise it's a Lead.
-
     const objectType = sfObjects.Contact ? "Contact" : "Lead";
     const mapping = options.mappings[objectType];
 
