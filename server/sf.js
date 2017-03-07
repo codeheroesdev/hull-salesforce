@@ -1,7 +1,5 @@
 import _ from "lodash";
 import Promise from "bluebird";
-import Hull from "hull";
-
 import librato from "librato-node";
 
 function increment(metric, value, options) {
@@ -10,7 +8,7 @@ function increment(metric, value, options) {
       librato.increment(metric, value, options);
     }
   } catch(err) {
-    // Hull.logger.warn('Librato error', err)
+    // console.warn('Librato error', err)
   }
 }
 
@@ -21,9 +19,9 @@ function escapeSOSL(str) {
 }
 
 export class SF {
-  constructor(connection, hullClient) {
+  constructor(connection, logger) {
     this.connection = connection;
-    this.logger = hullClient.logger;
+    this.logger = logger;
   }
 
   upsert(type, input, externalIDFieldName = "Email") {
@@ -97,7 +95,7 @@ export class SF {
 
   _upsertBulk(type, input = [], extIdField = "Email") {
     const SObject = this.connection.sobject(type);
-    Hull.logger.log("upsert", JSON.stringify({ type, records: input.length }));
+    this.logger.log("upsert", JSON.stringify({ type, records: input.length }));
     return new Promise((resolve, reject) => {
       return SObject.upsertBulk(input, extIdField, (err, res) => {
         if (err) {

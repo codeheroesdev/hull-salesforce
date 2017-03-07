@@ -113,6 +113,9 @@ export default class Agent extends EventEmitter {
     });
 
     const connect = new Promise((resolve, reject) => {
+      // Hull
+      this.hull = new Hull(this.config.hull);
+
       // Salesforce
       const { login, password, loginUrl } = this.config.salesforce;
       const conn = new Connection({ loginUrl });
@@ -123,8 +126,8 @@ export default class Agent extends EventEmitter {
             this.emit("error", err);
             reject(err);
           } else {
-            this.emit('connect', userInfo);
-            this.sf = new SF(conn, new Hull(this.config.hull));
+            this.emit("connect", userInfo);
+            this.sf = new SF(conn, this.hull.logger);
             this.userInfo = userInfo;
             resolve(conn);
           }
@@ -132,13 +135,10 @@ export default class Agent extends EventEmitter {
       } else {
         reject(new Error("Salesforce credentials missing"));
       }
-
-      // Hull
-      this.hull = new Hull(this.config.hull);
     });
 
     connect.catch((err) => {
-      Hull.logger.log("Error establishing connection with Salesforce: for ", login, err);
+      Hull.logger.error("Error establishing connection with Salesforce: for ", login, err);
       return err;
     });
 

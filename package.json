@@ -22,11 +22,9 @@
   },
   "jest": {
     "rootDir": "server",
-    "scriptPreprocessor": "../node_modules/babel-jest",
-    "testFileExtensions": [
-      "es6",
-      "js"
-    ],
+    "transform": {
+      ".*": "../node_modules/babel-jest"
+    },
     "moduleFileExtensions": [
       "js",
       "json",
@@ -68,11 +66,14 @@
     "librato-node": "^4.1.0",
     "lodash": "^4.16.6",
     "newrelic": "^1.33.0",
+    "nf": "^0.0.3",
+    "node-babel": "^0.1.2",
     "passport-forcedotcom": "^0.1.4",
     "rimraf": "^2.5.4"
   },
   "devDependencies": {
     "babel-eslint": "^7.1.1",
+    "babel-jest": "^0.1.2",
     "babel-watch": "^2.0.3",
     "babel-jest": "^20.0.3",
     "eslint": "^3.17.1",
