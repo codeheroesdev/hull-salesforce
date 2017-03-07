@@ -33,7 +33,7 @@
     {
       "name": "synchronized_segments",
       "title": "Filter users",
-      "description": "Only send Users matching one or more of these segments. Sends everyone if empty.",
+      "description": "Global filter. Only send if user matches one of these segments.",
       "type": "array",
       "format": "segment",
       "items": {
