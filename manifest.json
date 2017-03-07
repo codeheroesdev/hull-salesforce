@@ -40,7 +40,7 @@
     {
       "name": "synchronized_segments",
       "title": "Send users belonging to one of these segments to Salesforce",
-      "description": "Sends all users if not set, otherwise only users in the specified segments are sent. Updates from Salesforce are always fetched for all users.",
+      "description": "Only users in the specified segments are sent. Updates from Salesforce are always fetched for all users.",
       "type": "array",
       "format": "segment",
       "items": {
