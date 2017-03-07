@@ -73,7 +73,7 @@
   },
   "devDependencies": {
     "babel-eslint": "^7.1.1",
-    "babel-jest": "^0.1.2",
+    "babel-jest": "^19.0.0",
     "babel-watch": "^2.0.3",
     "babel-jest": "^20.0.3",
     "eslint": "^3.17.1",
