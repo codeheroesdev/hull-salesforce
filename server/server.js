@@ -151,7 +151,7 @@ export default function Server({ hostSecret }) {
     handler(notifications = [], { ship, hull }) {
       const users = notifications.map(n => n.message);
       return Agent
-        .syncUsers(hull, ship, users, { applyFilters: false })
+        .syncUsers(hull, ship, users, { applyFilters: true })
         .then(() => console.warn("batch done"))
         .catch(err => hull.logger.error("batch err", { err }));
     }

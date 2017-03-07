@@ -6,7 +6,7 @@ import { SF } from "./sf";
 import { syncRecords } from "./sync";
 import Connection from "./connection";
 import { buildConfigFromShip } from "./config";
-import { getFieldsMappingToHullTraits } from "./mapping_data";
+import { getFieldsMappingToHullTraits } from "./mapping-data";
 
 function log(a, b, c) {
   if (process.env.DEBUG) {
@@ -34,7 +34,6 @@ export default class Agent extends EventEmitter {
     const config = buildConfigFromShip(ship, organization, secret);
     const agent = new Agent(config);
     const matchingUsers = applyFilters ? agent.getUsersMatchingSegments(users) : users;
-
     let result = Promise.resolve({});
     if (matchingUsers.length > 0) {
       result = agent.connect().then(() => {
@@ -206,7 +205,8 @@ export default class Agent extends EventEmitter {
 
   fetchAll() {
     const { mappings } = this.config;
-    return Promise.all(_.map(mappings, ({ type, fetchFields: fields }) => {
+    return Promise.all(_.map(mappings, ({ type, fetchFields }) => {
+      const fields = _.keys(fetchFields);
       if (fields && fields.length > 0) {
         this.hull.logger.info("incoming.job.start", { jobName: "fetchAll", type, fetchFields: fields });
         return this.sf.getAllRecords({ type, fields }, (record = {}) => {
@@ -223,6 +223,7 @@ export default class Agent extends EventEmitter {
             [`${source}/id`]: record.Id
           });
           if (!_.isEmpty(traits)) {
+            this.hull.logger.info("incoming.user", { email: record.Email, ...traits }, );
             return this.hull
               .as({ email: record.Email })
               .traits(traits)
