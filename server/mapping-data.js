@@ -24,10 +24,13 @@ const DEFAULT_MAPPING = {
     { service_attribute: "LastActivityDate", hull_top_level_trait: null, hull_trait: "last_activity_date", type: "string" },
 
     { service_attribute: "ConvertedDate", hull_top_level_trait: null, hull_trait: "converted_at", type: "string" },
-    { service_attribute: "City", hull_top_level_trait: "city", hull_trait: "city", type: "string" },
-    { service_attribute: "PostalCode", hull_top_level_trait: "postal_code", hull_trait: "postal_code", type: "string" },
-    { service_attribute: "State", hull_top_level_trait: "state", hull_trait: "state", type: "string" },
-    { service_attribute: "Country", hull_top_level_trait: "country", hull_trait: "country", type: "string" },
+    
+    // Address object
+    { service_attribute: "City", hull_top_level_trait: "address.city", hull_trait: "city", type: "string" },
+    { service_attribute: "PostalCode", hull_top_level_trait: "address.postal_code", hull_trait: "postal_code", type: "string" },
+    { service_attribute: "State", hull_top_level_trait: "address.state", hull_trait: "state", type: "string" },
+    { service_attribute: "Country", hull_top_level_trait: "address.country", hull_trait: "country", type: "string" },
+    
     // { service_attribute: "MiddleName", hull_top_level_trait: null, hull_trait: "middle_name", type: "string" }, // No such column 'MiddleName' on entity 'Lead'
     { service_attribute: "Industry", hull_top_level_trait: null, hull_trait: "industry", type: "string" },
     // { service_attribute: "CountryCode", hull_top_level_trait: null, hull_trait: "country_code", type: "string" }, // No such column 'CountryCode' on entity 'Lead'
@@ -53,11 +56,13 @@ const DEFAULT_MAPPING = {
     { service_attribute: "SystemModstamp", hull_top_level_trait: null, hull_trait: "system_modstamp", type: "string" },
     { service_attribute: "LastActivityDate", hull_top_level_trait: null, hull_trait: "last_activity_date", type: "string" },
 
-    { service_attribute: "MailingStreet", hull_top_level_trait: "street", hull_trait: "mailing_street", type: "string" },
-    { service_attribute: "MailingCity", hull_top_level_trait: "city", hull_trait: "mailing_city", type: "string" },
-    { service_attribute: "MailingPostalCode", hull_top_level_trait: "postal_code", hull_trait: "mailing_postal_code", type: "string" },
-    { service_attribute: "MailingState", hull_top_level_trait: "state", hull_trait: "mailing_state", type: "string" },
-    { service_attribute: "MailingCountry", hull_top_level_trait: "country", hull_trait: "mailing_country", type: "string" },
+    // Address object
+    { service_attribute: "MailingStreet", hull_top_level_trait: "address.street", hull_trait: "mailing_street", type: "string" },
+    { service_attribute: "MailingCity", hull_top_level_trait: "address.city", hull_trait: "mailing_city", type: "string" },
+    { service_attribute: "MailingPostalCode", hull_top_level_trait: "address.postal_code", hull_trait: "mailing_postal_code", type: "string" },
+    { service_attribute: "MailingState", hull_top_level_trait: "address.state", hull_trait: "mailing_state", type: "string" },
+    { service_attribute: "MailingCountry", hull_top_level_trait: "address.country", hull_trait: "mailing_country", type: "string" },
+    
     // { service_attribute: "MiddleName", hull_top_level_trait: null, hull_trait: "middle_name", type: "string" }, // No such column 'MiddleName' on entity 'Contact'
     { service_attribute: "Birthdate", hull_top_level_trait: null, hull_trait: "birthdate", type: "string" },
     // { service_attribute: "DoNotCall", hull_top_level_trait: null, hull_trait: "do_not_call", type: "string" }, // No such column 'DoNotCall' on entity 'Contact'

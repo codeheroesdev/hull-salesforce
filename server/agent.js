@@ -204,14 +204,14 @@ export default class Agent extends EventEmitter {
     // Adds salesforce attribute
     _.map(mappings.fetchFields, (hullGroupField, salesforceField) => {
       if (_.has(record, salesforceField)) {
-        traits[traitName(source, hullGroupField, salesforceField)] = record[salesforceField];
+        _.set(traits, traitName(source, hullGroupField, salesforceField), record[salesforceField]);
       }
     });
 
     // Adds hull top level property if the salesforce attribute can be mapped
     _.map(mappings.fetchFieldsToTopLevel, (hullTopLevelField, salesforceField) => {
       if (!_.isNil(hullTopLevelField) && _.has(record, salesforceField)) {
-        traits[hullTopLevelField] = { value: record[salesforceField], operation: "setIfNull" };
+        _.set(traits, hullTopLevelField, { value: record[salesforceField], operation: "setIfNull" });
       }
     });
     return traits;
