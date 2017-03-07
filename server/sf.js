@@ -1,7 +1,5 @@
 import _ from "lodash";
 import Promise from "bluebird";
-import Hull from "hull";
-
 import librato from "librato-node";
 
 function increment(metric, value, options) {
@@ -10,7 +8,7 @@ function increment(metric, value, options) {
       librato.increment(metric, value, options);
     }
   } catch(err) {
-    // Hull.logger.warn('Librato error', err)
+    // console.warn('Librato error', err)
   }
 }
 
@@ -21,8 +19,9 @@ function escapeSOSL(str) {
 }
 
 export class SF {
-  constructor(connection) {
+  constructor(connection, logger) {
     this.connection = connection;
+    this.logger = logger;
   }
 
   upsert(type, input, externalIDFieldName = "Email") {
@@ -42,15 +41,15 @@ export class SF {
       return this.connection.soap._invoke("upsert", message, false, (err, res) => {
         if (err) {
           increment("salesforce:errors", 1, { source: this.connection._shipId });
-          Hull.logger.log("upsert error", JSON.stringify({ err, res, externalIDFieldName, input }));
+          this.logger.log("upsert error", JSON.stringify({ err, res, externalIDFieldName, input }));
           reject(err);
         } else {
-          Hull.logger.log("upsert success", JSON.stringify({ err, res, externalIDFieldName, input }));
+          this.logger.log("upsert success", JSON.stringify({ err, res, externalIDFieldName, input }));
           if (_.isArray(res)) {
             res.map((r, idx) => {
               increment("salesforce:errors", 1, { source: this.connection._shipId });
               if (r.success !== "true") {
-                Hull.logger.log("upsert error", JSON.stringify({ res: r, input: input[idx] }));
+                this.logger.log("upsert error", JSON.stringify({ res: r, input: input[idx] }));
               }
             });
           }
@@ -62,18 +61,18 @@ export class SF {
 
   _upsertBulk(type, input = [], extIdField = "Email") {
     const SObject = this.connection.sobject(type);
-    Hull.logger.log("upsert", JSON.stringify({ type, records: input.length }));
+    this.logger.log("upsert", JSON.stringify({ type, records: input.length }));
     return new Promise((resolve, reject) => {
       return SObject.upsertBulk(input, extIdField, (err, res) => {
         if (err) {
-          Hull.logger.log("upsert error", JSON.stringify({ err, res, extIdField, input }));
+          this.logger.log("upsert error", JSON.stringify({ err, res, extIdField, input }));
           reject(err);
         } else {
           if (_.isArray(res)) {
             res.map((r, idx) => {
               increment("salesforce:errors", 1, { source: this.connection._shipId });
               if (r.success.toString() !== "true") {
-                Hull.logger.log("bulk upsert error", JSON.stringify({ res: r, input: input[idx] }));
+                this.logger.log("bulk upsert error", JSON.stringify({ res: r, input: input[idx] }));
               }
             });
           }

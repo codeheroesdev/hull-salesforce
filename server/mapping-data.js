@@ -2,7 +2,7 @@ import _ from "lodash";
 
 const DEFAULT_MAPPING = {
   Lead: [
-    { service_attribute: "Email", hull_top_level_trait: "email", hull_trait: "email", type: "string" },
+    { service_attribute: "Email", hull_top_level_trait: null, hull_trait: "email", type: "string" },
     // { service_attribute: "HasOptedOutOfEmail", hull_top_level_trait: "accepts_marketing", hull_trait: "has_opted_out_of_email", type: "bool" }, // No such column 'HasOptedOutOfEmail' on entity 'Lead'
     { service_attribute: "FirstName", hull_top_level_trait: "first_name", hull_trait: "first_name", type: "string" },
     { service_attribute: "LastName", hull_top_level_trait: "last_name", hull_trait: "last_name", type: "string" },
@@ -11,7 +11,7 @@ const DEFAULT_MAPPING = {
     { service_attribute: "IsConverted", hull_top_level_trait: null, hull_trait: "is_converted", type: "bool" },
     { service_attribute: "Salutation", hull_top_level_trait: "salutation", hull_trait: "salutation", type: "string" },
     { service_attribute: "Title", hull_top_level_trait: "title", hull_trait: "title", type: "string" },
-    { service_attribute: "Company", hull_top_level_trait: "company", hull_trait: "company", type: "string" },
+    { service_attribute: "Company", hull_top_level_trait: null, hull_trait: "company", type: "string" },
     { service_attribute: "Industry", hull_top_level_trait: null, hull_trait: "industry", type: "string" },
     { service_attribute: "Phone", hull_top_level_trait: "phone", hull_trait: "phone", type: "string" },
     { service_attribute: "MobilePhone", hull_top_level_trait: "mobile_phone", hull_trait: "mobile_phone", type: "string" },
@@ -37,7 +37,7 @@ const DEFAULT_MAPPING = {
     { service_attribute: "OwnerId", hull_top_level_trait: null, hull_trait: "owner_id", type: "string" }
   ],
   Contact: [
-    { service_attribute: "Email", hull_top_level_trait: "email", hull_trait: "email", type: "string" },
+    { service_attribute: "Email", hull_top_level_trait: null, hull_trait: "email", type: "string" },
     // { service_attribute: "HasOptedOutOfEmail", hull_top_level_trait: "accepts_marketing", hull_trait: "has_opted_out_of_email", type: "bool" }, // No such column 'HasOptedOutOfEmail' on entity 'Contact'
     { service_attribute: "FirstName", hull_top_level_trait: "first_name", hull_trait: "first_name", type: "string" },
     { service_attribute: "LastName", hull_top_level_trait: "last_name", hull_trait: "last_name", type: "string" },
@@ -70,10 +70,9 @@ const DEFAULT_MAPPING = {
 
 /**
  * Returns a mapping between Salesforce attributes and Hull top level
- * properties for the given Salesforce record type.
+ * traits for the given Salesforce record type.
  * @param {String} type Salesforce record type (Lead | Contact).
- * @return {Object} Salesforce attributes names to Hull top level properties
- *                  names.
+ * @return {Object} Salesforce attributes names to Hull top level trait names.
  */
 export function getServiceAttributeToHullTopLevel(type) {
   return _.mapValues(_.keyBy(_.get(DEFAULT_MAPPING, type, []), "service_attribute"), mapping => mapping.hull_top_level_trait);
