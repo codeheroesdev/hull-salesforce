@@ -7,12 +7,6 @@ import { syncRecords } from "./sync";
 import Connection from "./connection";
 import { buildConfigFromShip } from "./config";
 
-function log(a, b, c) {
-  if (process.env.DEBUG) {
-    console.log(a, b, c);
-  }
-}
-
 function toUnderscore(str) {
   return str
     .replace(/([A-Z])/g, c => `_${c.toLowerCase()}`)
@@ -116,7 +110,7 @@ export default class Agent extends EventEmitter {
     // Configure with Salesforce and Hull credentials
 
     this.on("error", (err) => {
-      console.warn("Sync Error ", err);
+      Hull.logger.warn("Sync Error ", err);
     });
 
     const connect = new Promise((resolve, reject) => {
@@ -145,7 +139,7 @@ export default class Agent extends EventEmitter {
     });
 
     connect.catch((err) => {
-      console.log("Error establishing connection with Salesforce: for ", login, err);
+      Hull.logger.log("Error establishing connection with Salesforce: for ", login, err);
       return err;
     });
 
@@ -276,7 +270,7 @@ export default class Agent extends EventEmitter {
         const records = recordsByType[recordType];
         if (records && records.length > 0) {
           return this.sf.upsert(recordType, records).then((results) => {
-            _.map(records, record => this.hull.logger.info("outcoming.user", record));
+            _.map(records, record => this.hull.logger.info("outgoing.user", record));
             return { recordType, results, records };
           });
         }

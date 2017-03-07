@@ -2,9 +2,8 @@ import _ from "lodash";
 import express from "express";
 import cors from "cors";
 import path from "path";
-import { NotifHandler, BatchHandler, Middleware, OAuthHandler } from "hull";
+import { Hull, NotifHandler, BatchHandler, Middleware, OAuthHandler } from "hull";
 import { Strategy } from "passport-forcedotcom";
-import bodyParser from "body-parser";
 import librato from "librato-node";
 import { renderFile } from "ejs";
 
@@ -111,10 +110,10 @@ export default function Server({ hostSecret }) {
     hostSecret,
     groupTraits: false,
     onSusbscribe(message, context) {
-      console.warn("Hello new subscriber !", { message, context });
+      Hull.logger.warn("Hello new subscriber !", { message, context });
     },
     onError(message, status) {
-      console.warn("Error", status, message);
+      Hull.logger.warn("Error", status, message);
     },
     handlers: {
       "user:update": ({ message }, { ship, hull }) => {
@@ -125,7 +124,7 @@ export default function Server({ hostSecret }) {
           }
           return true;
         } catch (err) {
-          console.warn("Error in Users sync", err, err.stack);
+          Hull.logger.warn("Error in Users sync", err, err.stack);
           return err;
         }
       }
@@ -139,9 +138,9 @@ export default function Server({ hostSecret }) {
     handler(notifications = [], { ship, hull }) {
       const users = notifications.map(n => n.message);
       return Agent
-        .syncUsers(hull, ship, users, { applyFilters: true })
-        .then(() => console.warn("batch done"))
-        .catch(err => console.warn("batch err", err));
+        .syncUsers(hull, ship, users, { applyFilters: false })
+        .then(() => Hull.logger.warn("batch done"))
+        .catch(err => Hull.logger.warn("batch err", err));
     }
   }));
 

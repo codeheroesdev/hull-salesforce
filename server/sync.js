@@ -1,24 +1,5 @@
 import Hogan from "hogan.js";
 import _ from "lodash";
-export function syncRecords(sfObjectsByEmail, users, options) {
-  return users.reduce((records, user) => {
-    const sfObjects = sfObjectsByEmail[user.email] || {};
-
-    // If a Contact with this email is known, let's update it, otherwise it's a Lead.
-    const objectType = sfObjects.Contact ? "Contact" : "Lead";
-    const mapping = options.mappings[objectType];
-
-    if (mapping) {
-      const record = getUpdatedFields(user, sfObjects[objectType], mapping);
-      if (record) {
-        records[objectType].push(record);
-      }
-    }
-
-    return records;
-  }, { Contact: [], Lead: [] });
-}
-
 
 export function getUpdatedFields(user, sfObject, mapping) {
   const fields = mapping.fields;
@@ -41,7 +22,7 @@ export function getUpdatedFields(user, sfObject, mapping) {
         val = Hogan.compile(def.tpl).render(user);
       }
 
-      if (defaultValue && (_.isNil(val) || val.length == 0)) {
+      if (defaultValue && (_.isNil(val) || val.length === 0)) {
         try {
           val = Hogan.compile(defaultValue).render(user);
         } catch (err) {
@@ -58,4 +39,24 @@ export function getUpdatedFields(user, sfObject, mapping) {
   if (Object.keys(record).length > 1) {
     return record;
   }
+  return undefined;
+}
+
+export function syncRecords(sfObjectsByEmail, users, options) {
+  return users.reduce((records, user) => {
+    const sfObjects = sfObjectsByEmail[user.email] || {};
+
+    // If a Contact with this email is known, let's update it, otherwise it's a Lead.
+    const objectType = sfObjects.Contact ? "Contact" : "Lead";
+    const mapping = options.mappings[objectType];
+
+    if (mapping) {
+      const record = getUpdatedFields(user, sfObjects[objectType], mapping);
+      if (record) {
+        records[objectType].push(record);
+      }
+    }
+
+    return records;
+  }, { Contact: [], Lead: [] });
 }

@@ -1,5 +1,6 @@
 import jsforce from "jsforce";
 import librato from "librato-node";
+import Hull from "hull";
 
 function increment(metric, value, options) {
   try {
@@ -7,7 +8,7 @@ function increment(metric, value, options) {
       librato.increment(metric, value, options);
     }
   } catch (err) {
-    // console.warn("Librato error", err)
+    // Hull.logger.warn("Librato error", err)
   }
 }
 
@@ -17,7 +18,7 @@ function measure(metric, value, options) {
       librato.measure(metric, value, options);
     }
   } catch (err) {
-    // console.warn("Librato error", err)
+    // Hull.logger.warn("Librato error", err)
   }
 }
 
@@ -36,7 +37,7 @@ export default class Connection extends jsforce.Connection {
         measure("salesforce:used", this.limitInfo.apiUsage.used, { source: this._shipId });
       }
     }, (res) => {
-      console.warn("salesforce API error", JSON.stringify({ request, options, res }));
+      Hull.logger.warn("salesforce API error", JSON.stringify({ request, options, res }));
       increment("salesforce:errors", 1, { source: this._shipId });
     });
     return ret;
