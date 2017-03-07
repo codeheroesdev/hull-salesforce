@@ -3,7 +3,7 @@ import { resolve } from "path";
 import { readFileSync } from "fs";
 import { createHmac } from "crypto";
 import Hull from "hull";
-import { getFieldsToHullTopLevel } from "./mapping-data";
+import { getServiceAttributeToHullTopLevel, getServiceAttributeToHullTrait } from "./mapping-data";
 
 /**
  * Deprecated
@@ -81,16 +81,18 @@ function getHullClient(organization, id, secret) {
 function getFieldsMapping(ship, type) {
   const fieldsList = ship.private_settings[`${type.toLowerCase()}s_mapping`];
   // Fetch all default salesforce attributes
-  const defaultFetchFields = getFieldsToHullTopLevel(type);
+  const defaultServiceAttributesToHullTrait = getServiceAttributeToHullTrait(type);
+  const defaultServiceAttributesToHullTopLevel = getServiceAttributeToHullTopLevel(type);
   // Fetch custom salesforce attributes defined
-  const settingsFetchFields = (ship.private_settings[`fetch_${type.toLowerCase()}_fields`] || [])
+  const settingsServiceAttributesToHullTrait = (ship.private_settings[`fetch_${type.toLowerCase()}_fields`] || [])
     .reduce(function setNullValue(result, field) {
       // Do not map custom attributes to hull top level properties
       result[field] = null;
       return result;
     }, {});
 
-  const fetchFields = _.merge(defaultFetchFields, settingsFetchFields);
+  const fetchFields = _.merge(defaultServiceAttributesToHullTrait, settingsServiceAttributesToHullTrait);
+
 
   const fields = {};
   if (fieldsList && fieldsList.length > 0) {
@@ -108,7 +110,7 @@ function getFieldsMapping(ship, type) {
     });
   }
 
-  return { type, fetchFields, fields };
+  return { type, fetchFields, fields, fetchFieldsToTopLevel: defaultServiceAttributesToHullTopLevel };
 }
 
 export function buildConfigFromShip(ship, organization, secret) {

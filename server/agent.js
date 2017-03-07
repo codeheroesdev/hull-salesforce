@@ -20,8 +20,8 @@ function toUnderscore(str) {
     .replace(/^_/, "");
 }
 
-function trait_name(source, field, mapping) {
-  return `${source}/${_.get(mapping, field, toUnderscore(field))}`;
+function traitName(source, hullGroupField, salesforceField) {
+  return !_.isNil(hullGroupField) ? `${source}/${hullGroupField}` : `${source}/${toUnderscore(salesforceField)}`;
 }
 
 const Cache = cacheManager.caching({ store: "memory", max: 100, ttl: 60 });
@@ -203,27 +203,36 @@ export default class Agent extends EventEmitter {
     });
   }
 
+  getRecordTraits(type, record) {
+    const source = `salesforce_${type.toLowerCase()}`;
+    const traits = {};
+    const mappings = this.config.mappings[type];
+
+    // Adds salesforce attribute
+    _.map(mappings.fetchFields, (hullGroupField, salesforceField) => {
+      if (_.has(record, salesforceField)) {
+        traits[traitName(source, hullGroupField, salesforceField)] = record[salesforceField];
+      }
+    });
+
+    // Adds hull top level property if the salesforce attribute can be mapped
+    _.map(mappings.fetchFieldsToTopLevel, (hullTopLevelField, salesforceField) => {
+      if (!_.isNil(hullTopLevelField) && _.has(record, salesforceField)) {
+        traits[hullTopLevelField] = { value: record[salesforceField], operation: "setIfNull" };
+      }
+    });
+    return traits;
+  }
+
   fetchAll() {
     const { mappings } = this.config;
     return Promise.all(_.map(mappings, ({ type, fetchFields }) => {
       const fields = _.keys(fetchFields);
       if (fields && fields.length > 0) {
         return this.sf.getAllRecords({ type, fields }, (record = {}) => {
-          const source = `salesforce_${type.toLowerCase()}`;
-          const traits = _.reduce(fields, (t, k) => {
-            const val = record[k];
-            if (val != null) {
-              return { ...t, [`${source}/${toUnderscore(k)}`]: val };
-            } else {
-              return t;
-            }
-          }, {
-            first_name: { operation: "setIfNull", value: record.FirstName },
-            last_name: { operation: "setIfNull", value: record.LastName },
-            [`${source}/id`]: record.Id
-          });
+          const traits = this.getRecordTraits(type, record);
           if (!_.isEmpty(traits)) {
-            this.hull.logger.info("incoming.user", { email: record.Email, ...traits }, );
+            this.hull.logger.info("incoming.user", { email: record.Email, ...traits });
             return this.hull
               .as({ email: record.Email })
               .traits(traits);
@@ -242,26 +251,14 @@ export default class Agent extends EventEmitter {
       }
       return { type, fields: fetchFields, records: [] };
     })).then((changes) => {
-      const fieldsMappingToTraits = ["Lead", "Contact"].reduce((result, type) => {
-        result[type] = getFieldsMappingToHullTraits(type);
-        return result;
-      }, {});
       const promises = [];
-      changes.map(({ type, records, fields }) => {
-        records.map((rec) => {
-          const source = `salesforce_${type.toLowerCase()}`;
-          const traits = _.reduce(fields, (t, k) => {
-            // Adds salesforce attribute
-            t[trait_name(source, k, fieldsMappingToTraits)] = rec[k];
-            // Adds hull top level property if the salesforce attribute can be mapped
-            if (mappings[type].fetchFields && !_.isNil(mappings[type].fetchFields[k])) {
-              t[mappings[type].fetchFields[k]] = { value: rec[k], operation: "setIfNull" };
-            }
-            return t;
-          }, {});
+      changes.map(({ type, records }) => {
+        records.map((record) => {
+          const traits = this.getRecordTraits(type, record);
           if (!_.isEmpty(traits)) {
+            this.hull.logger.info("incoming.user", { email: record.Email, ...traits });
             promises.push(this.hull
-              .as({ email: rec.Email })
+              .as({ email: record.Email })
               .traits(traits));
           }
         });

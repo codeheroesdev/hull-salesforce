@@ -12,13 +12,13 @@ const ship = {
 describe("buildConfigFromShip", () => {
   it("build a config object from the ship config object", () => {
     const config = require("../config");
-    const getFieldsToHullTopLevel = require("../mapping-data").getFieldsToHullTopLevel;
+    const getServiceAttributeToHullTopLevel = require("../mapping-data").getServiceAttributeToHullTopLevel;
     const c = config.buildConfigFromShip(ship, organization, secret);
     expect(_.keys(c)).toEqual(["hull", "salesforce", "sync", "mappings"]);
     expect(_.keys(c.mappings)).toEqual(["Lead", "Contact"]);
     ["Lead", "Contact"].forEach((type) => {
       expect(_.keys(c.mappings[type])).toEqual(["type", "fetchFields", "fields"]);
-      expect(c.mappings[type].fetchFields).toEqual(getFieldsToHullTopLevel(type));
+      expect(c.mappings[type].fetchFields).toEqual(getServiceAttributeToHullTopLevel(type));
     });
   });
 });
