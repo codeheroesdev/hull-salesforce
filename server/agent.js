@@ -197,7 +197,7 @@ export default class Agent extends EventEmitter {
   }
 
   getRecordTraits(type, record) {
-    const source = `salesforce_${type.toLowerCase()}`;
+    const source = type === "Account" ? "salesforce" : `salesforce_${type.toLowerCase()}`;
     const traits = {};
     const mappings = this.config.mappings[type];
 
@@ -225,10 +225,15 @@ export default class Agent extends EventEmitter {
         return this.sf.getAllRecords({ type, fields }, (record = {}) => {
           const traits = this.getRecordTraits(type, record);
           if (!_.isEmpty(traits)) {
-            this.hull.logger.info("incoming.user", { email: record.Email, ...traits });
-            return this.hull
-              .as({ email: record.Email })
-              .traits(traits);
+            let subject;
+            if (type === "Account") {
+              this.hull.logger.info("incoming.account", { domain: record.Website, ...traits });
+              subject = this.hull.asAccount({ domain: record.Website });
+            } else {
+              this.hull.logger.info("incoming.user", { email: record.Email, ...traits });
+              subject = this.hull.asUser({ email: record.Email });
+            }
+            subject.traits(traits);
           }
         });
       }
@@ -249,10 +254,15 @@ export default class Agent extends EventEmitter {
         records.map((record) => {
           const traits = this.getRecordTraits(type, record);
           if (!_.isEmpty(traits)) {
-            this.hull.logger.info("incoming.user", { email: record.Email, ...traits });
-            promises.push(this.hull
-              .as({ email: record.Email })
-              .traits(traits));
+            let subject;
+            if (type === "Account") {
+              this.hull.logger.info("incoming.account", { domain: record.Website, ...traits });
+              subject = this.hull.asAccount({ domain: record.Website });
+            } else {
+              this.hull.logger.info("incoming.user", { email: record.Email, ...traits });
+              subject = this.hull.asUser({ email: record.Email });
+            }
+            promises.push(subject.traits(traits));
           }
         });
       });
