@@ -18,8 +18,8 @@ describe("buildConfigFromShip", () => {
 
     const c = config.buildConfigFromShip(ship, organization, secret);
     expect(_.keys(c)).toEqual(["hull", "salesforce", "sync", "mappings"]);
-    expect(_.keys(c.mappings)).toEqual(["Lead", "Contact"]);
-    ["Lead", "Contact"].forEach((type) => {
+    expect(_.keys(c.mappings)).toEqual(["Lead", "Contact", "Account"]);
+    _.keys(c.mappings).forEach((type) => {
       expect(_.keys(c.mappings[type])).toEqual(["type", "fetchFields", "fields", "fetchFieldsToTopLevel"]);
       expect(c.mappings[type].fetchFields).toEqual(getServiceAttributeToHullTrait(type));
       expect(c.mappings[type].fetchFieldsToTopLevel).toEqual(getServiceAttributeToHullTopLevel(type));
