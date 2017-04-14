@@ -18,8 +18,8 @@ export default class BatchSyncHandler {
   }
 
   static getHandler({ hull, ship, options }) {
-    const handler = HANDLERS[ship.id] = HANDLERS[ship.id] || new BatchSyncHandler({ hull, ship, options });
-    return handler;
+    HANDLERS[ship.id] = HANDLERS[ship.id] || new BatchSyncHandler({ hull, ship, options });
+    return HANDLERS[ship.id];
   }
 
   static handle(message, { hull, ship, options }) {

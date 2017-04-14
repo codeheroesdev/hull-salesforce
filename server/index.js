@@ -1,9 +1,19 @@
+import librato from "librato-node";
 import Hull from "hull";
-import { Agent } from "./agent";
-import { Server } from "./server";
-import config from "./config";
 
 Hull.logger.transports.console.json = true;
 Hull.logger.info("start", { transport: "console" });
 
-export default { Agent, Server, config };
+if (process.env.LIBRATO_TOKEN && process.env.LIBRATO_USER) {
+  librato.configure({
+    email: process.env.LIBRATO_USER,
+    token: process.env.LIBRATO_TOKEN
+  });
+  librato.on("error", (err) => {
+    console.error(err);
+  });
+  process.once("SIGINT", () => {
+    librato.stop(); // stop optionally takes a callback
+  });
+  librato.start();
+}
