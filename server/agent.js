@@ -196,7 +196,7 @@ export default class Agent extends EventEmitter {
   }
 
   getRecordTraits(type, record) {
-    const source = `salesforce_${type.toLowerCase()}`;
+    const source = type === "Account" ? "salesforce" : `salesforce_${type.toLowerCase()}`;
     const traits = {};
     const mappings = this.config.mappings[type];
 
@@ -225,11 +225,19 @@ export default class Agent extends EventEmitter {
         return this.sf.getAllRecords({ type, fields }, (record = {}) => {
           const traits = this.getRecordTraits(type, record);
           if (!_.isEmpty(traits)) {
-            this.hull.logger.info("incoming.user", { email: record.Email, ...traits });
-            return this.hull
-              .as({ email: record.Email })
-              .traits(traits)
-              .then(() => this.hull.logger.info("incoming.user.success", { email: record.Email, traits }));
+            if (type === "Account") {
+              this.hull.logger.info("incoming.account", { domain: record.Website, traits });
+              this.hull
+                .asAccount({ domain: record.Website })
+                .traits(traits)
+                .then(() => this.hull.logger.info("incoming.account.success", { domain: record.Website, traits }));
+            } else {
+              this.hull.logger.info("incoming.user", { email: record.Email, traits });
+              this.hull
+                .asUser({ email: record.Email })
+                .traits(traits)
+                .then(() => this.hull.logger.info("incoming.user.success", { email: record.Email, traits }));
+            }
           }
         });
       }
@@ -251,11 +259,19 @@ export default class Agent extends EventEmitter {
         records.map((record) => {
           const traits = this.getRecordTraits(type, record);
           if (!_.isEmpty(traits)) {
-            this.hull.logger.info("incoming.user", { email: record.Email, ...traits });
-            promises.push(this.hull
-              .as({ email: record.Email })
-              .traits(traits)
-              .then(() => this.hull.logger.info("incoming.user.success", { email: rec.Email, traits })));
+            if (type === "Account") {
+              this.hull.logger.info("incoming.account", { domain: record.Website, traits });
+              promises.push(this.hull
+                .asAccount({ domain: record.Website })
+                .traits(traits)
+                .then(() => this.hull.logger.info("incoming.account.success", { domain: record.Website, traits })));
+            } else {
+              this.hull.logger.info("incoming.user", { email: record.Email, traits });
+              promises.push(this.hull
+                .asUser({ email: record.Email })
+                .traits(traits)
+                .then(() => this.hull.logger.info("incoming.user.success", { email: rec.Email, traits })));
+            }
           }
         });
       });

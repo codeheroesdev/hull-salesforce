@@ -3,7 +3,7 @@ import { resolve } from "path";
 import { readFileSync } from "fs";
 import { createHmac } from "crypto";
 import Hull from "hull";
-import { getServiceAttributeToHullTopLevel, getServiceAttributeToHullTrait } from "./mapping-data";
+import { getTypes, getServiceAttributeToHullTopLevel, getServiceAttributeToHullTrait } from "./mapping-data";
 
 /**
  * Deprecated
@@ -124,7 +124,7 @@ export function buildConfigFromShip(ship, organization, secret) {
     salesforce_login_url
   } = ship.private_settings;
 
-  const mappings = ["Lead", "Contact"].reduce((memo, type) => {
+  const mappings = getTypes().reduce((memo, type) => {
     memo[type] = getFieldsMapping(ship, type);
     return memo;
   }, {});
