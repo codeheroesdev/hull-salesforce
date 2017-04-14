@@ -133,24 +133,43 @@ export class SF {
     });
   }
 
+  getDefaultFields(type) {
+    if (type === "Account") {
+      return ["Id", "Website"];
+    }
+    return ["Id", "Email", "FirstName", "LastName"];
+  }
+
+  getRequiredField(type) {
+    if (type === "Account") {
+      return "Id";
+    }
+    return "Email";
+  }
+
   /**
   * Fetch all records of a given type by ID
   *
   */
   getRecordsByIds(type, ids, options = {}) {
+    const defaultFields = this.getDefaultFields(type);
+    const requiredField = this.getRequiredField(type);
     const fieldsList = (options && options.fields && options.fields.length > 0) ? Promise.resolve(options.fields) : this.getFieldsList(type).then(_.keys);
     return fieldsList.then((fields) => {
-      const selectFields = _.uniq(fields.concat(["Id", "Email", "FirstName", "LastName"])).join(",");
+      const selectFields = _.uniq(fields.concat(defaultFields)).join(",");
       const idsList = ids.map(f => `'${f}'`).join(",");
-      const query = `SELECT ${selectFields} FROM ${type} WHERE Id IN (${idsList}) AND Email != null`;
+      const query = `SELECT ${selectFields} FROM ${type} WHERE Id IN (${idsList}) AND ${requiredField} != null`;
       return this.exec("query", query).then(({ records }) => records);
     });
   }
 
   getAllRecords({ type, fields = [] }, onRecord) {
-    const selectFields = _.uniq(fields.concat(["Id", "Email", "FirstName", "LastName"])).join(",");
+    // Default fields for Leads and Contacts
+    const defaultFields = this.getDefaultFields(type);
+    const requiredField = this.getRequiredField(type);
+    const selectFields = _.uniq(fields.concat(defaultFields)).join(",");
     return new Promise((resolve, reject) => {
-      const soql = `SELECT ${selectFields} FROM ${type} WHERE Email != null`;
+      const soql = `SELECT ${selectFields} FROM ${type} WHERE ${requiredField} != null`;
       const query = this.connection.query(soql)
         .on("record", onRecord)
         .on("end", () => {
@@ -167,6 +186,7 @@ export class SF {
     const fields = options.fields || [];
     const since = options.since ? new Date(options.since) : new Date(new Date().getTime() - (3600 * 1000));
     const until = options.until ? new Date(options.until) : new Date();
+
     return new Promise((resolve, reject) => {
       return this.connection.sobject(type).updated(
         since.toISOString(),
