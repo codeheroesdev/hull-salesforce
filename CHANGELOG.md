@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.4.0
+- [feature] import salesforce accounts into hull
+
 ## v0.3.0
 - [feature] do not fetch all users when no synchronized segment is defined
 - [feature] fetch all default salesforce attributes
