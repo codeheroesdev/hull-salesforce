@@ -1,11 +1,8 @@
 import _ from "lodash";
-import express from "express";
 import cors from "cors";
-import path from "path";
-import { Hull, NotifHandler, BatchHandler, Middleware, OAuthHandler } from "hull";
-import { Strategy } from "passport-forcedotcom";
 import librato from "librato-node";
-import { renderFile } from "ejs";
+import { notifHandler, batchHandler, oAuthHandler } from "hull/lib/utils";
+import { Strategy } from "passport-forcedotcom";
 
 import BatchSyncHandler from "./batch-sync";
 import Agent from "./agent";
@@ -21,82 +18,51 @@ function save(hull, ship, settings) {
 }
 
 
-export default function Server({ hostSecret }) {
-  if (process.env.LIBRATO_TOKEN && process.env.LIBRATO_USER) {
-    librato.configure({
-      email: process.env.LIBRATO_USER,
-      token: process.env.LIBRATO_TOKEN
-    });
-    // librato.on("error", () => {
-    //   console.error(err);
-    // });
+module.exports = function Server(app, options = {}) {
+  const { Hull, hostSecret, port, onMetric, clientConfig = {} } = options;
+  const connector = new Hull.Connector({ hostSecret, port, clientConfig });
 
-    process.once("SIGINT", () => {
-      librato.stop(); // stop optionally takes a callback
-    });
+  connector.setupApp(app);
 
-    librato.start();
-  }
+  app.use("/auth", oAuthHandler({
+    hostSecret,
+    name: "Salesforce",
+    Strategy,
+    options: {
+      clientID: process.env.CLIENT_ID,
+      clientSecret: process.env.CLIENT_SECRET, // Client Secret
+      scope: ["refresh_token", "api"] // App Scope
+    },
+    isSetup(req, { hull, ship }) {
+      if (!!req.query.reset) return Promise.reject();
+      const { access_token, refresh_token, instance_url } = ship.private_settings || {};
 
-  const app = express();
+      if (access_token && refresh_token && instance_url) return Promise.resolve(ship);
 
-  app.set("views", `${__dirname}/../views`);
-  app.set("view engine", "ejs");
-  app.engine("html", renderFile);
-  app.use(express.static(path.resolve(__dirname, "..", "dist")));
-  app.use(express.static(path.resolve(__dirname, "..", "assets")));
+      return Promise.reject();
+    },
+    onLogin: (req, { hull, ship }) => {
+      req.authParams = { ...req.body, ...req.query };
+      return Promise.resolve(req.authParams);
+    },
+    onAuthorize: (req, { hull, ship }) => {
+      const { refreshToken, params } = (req.account || {});
+      const { access_token, instance_url } = params || {};
+      const salesforce_login = _.get(req, "account.profile._raw.username");
+      return save(hull, ship, {
+        refresh_token: refreshToken,
+        access_token, instance_url, salesforce_login
+      });
+    },
+    views: {
+      login: "login.html",
+      home: "home.html",
+      failure: "failure.html",
+      success: "success.html"
+    },
+  }));
 
-  app.use("/auth", (req, res, next) => {
-    const token = req.query.token || req.query.state;
-    if (token && token.split(".").length === 3) {
-      req.hull = req.hull || {};
-      req.hull.token = token;
-    }
-    next();
-  }, Middleware({ hostSecret }), (req, res, next) => {
-    const oauthUrl = req.hull.ship.private_settings.salesforce_oauth_url || "https://login.salesforce.com";
-    OAuthHandler({
-      hostSecret,
-      name: "Salesforce",
-      Strategy,
-      options: {
-        clientID: process.env.CLIENT_ID,
-        clientSecret: process.env.CLIENT_SECRET, // Client Secret
-        authorizationURL: `${oauthUrl}/services/oauth2/authorize`,
-        tokenURL: `${oauthUrl}/services/oauth2/token`,
-        scope: ["refresh_token", "api"] // App Scope
-      },
-      isSetup(req, { /* hull,*/ ship }) {
-        if (!!req.query.reset) return Promise.reject();
-        const { access_token, refresh_token, instance_url } = ship.private_settings || {};
-
-        if (access_token && refresh_token && instance_url) return Promise.resolve(ship);
-
-        return Promise.reject();
-      },
-      onLogin: (req, { hull, ship }) => {
-        req.authParams = { ...req.body, ...req.query };
-        return Promise.resolve(req.authParams);
-      },
-      onAuthorize: (req, { hull, ship }) => {
-        const { refreshToken, params } = (req.account || {});
-        const { access_token, instance_url } = params || {};
-        const salesforce_login = _.get(req, "account.profile._raw.username");
-        return save(hull, ship, {
-          refresh_token: refreshToken,
-          access_token, instance_url, salesforce_login
-        });
-      },
-      views: {
-        login: "login.html",
-        home: "home.html",
-        failure: "failure.html",
-        success: "success.html"
-      },
-    })(req, res, next);
-  });
-
-  app.post("/sync", Middleware({ hostSecret }), (req, res) => {
+  app.post("/sync", connector.clientMiddleware(), (req, res) => {
     const { client: hull, ship } = req.hull;
     Agent.fetchChanges(hull, ship).then((result) => {
       res.json({ ok: true, result });
@@ -107,7 +73,7 @@ export default function Server({ hostSecret }) {
     });
   });
 
-  app.post("/fetch-all", Middleware({ hostSecret }), (req, res) => {
+  app.post("/fetch-all", connector.clientMiddleware(), (req, res) => {
     const { client: hull, ship } = req.hull;
     Agent.fetchAll(hull, ship).then((result) => {
       res.json({ ok: true, result });
@@ -118,9 +84,13 @@ export default function Server({ hostSecret }) {
     });
   });
 
-  app.post("/notify", NotifHandler({
+  app.post("/notify", notifHandler({
+    userHandlerOptions: {
+      groupTraits: false,
+      maxSize: 1,
+      maxTime: 1
+    },
     hostSecret,
-    groupTraits: false,
     onSusbscribe(message, context) {
       Hull.logger.warn("Hello new subscriber !", { message, context });
     },
@@ -143,7 +113,7 @@ export default function Server({ hostSecret }) {
     }
   }));
 
-  app.post("/batch", BatchHandler({
+  app.post("/batch", batchHandler({
     hostSecret,
     batchSize: 2000,
     groupTraits: false,
@@ -156,11 +126,7 @@ export default function Server({ hostSecret }) {
     }
   }));
 
-  app.get("/manifest.json", (req, res) => {
-    res.sendFile(path.resolve(__dirname, "..", "manifest.json"));
-  });
-
-  app.get("/schema(/:type)", cors(), Middleware({ hostSecret, requireCredentials: false }), (req, res) => {
+  app.get("/schema(/:type)", cors(), connector.clientMiddleware({ requireCredentials: false }), (req, res) => {
     const { type } = req.params || {};
     const { client: hull, ship } = req.hull;
     return Agent.getFieldsSchema(hull, ship).then((definitions = {}) => {
@@ -173,8 +139,7 @@ export default function Server({ hostSecret }) {
     });
   });
 
-  return {
-    listen: port => app.listen(port),
-    exit: () => BatchSyncHandler.exit()
-  };
-}
+  connector.startApp(app);
+
+  return app;
+};

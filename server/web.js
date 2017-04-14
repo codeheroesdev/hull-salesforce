@@ -1,18 +1,19 @@
+import express from "express";
 import Hull from "hull";
+import server from "./server";
 
 if (process.env.NEW_RELIC_LICENSE_KEY) {
   Hull.logger.warn("starting newrelic with key: ", process.env.NEW_RELIC_LICENSE_KEY);
   require("newrelic");
 }
 
-const Server = require("./server").default;
 const config = require("./config").config(process.env);
 
-const PORT = process.env.PORT || 8082;
+config.Hull = Hull;
+config.port = process.env.PORT || 8082;
 
-Hull.logger.warn(`Starting on PORT ${PORT}`);
-const server = Server(config);
-server.listen(PORT);
+const app = express();
+server(app, config);
 
 function exitNow() {
   Hull.logger.warn("Exiting now !");
