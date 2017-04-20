@@ -33,25 +33,27 @@ module.exports = function Server(app, options = {}) {
       clientSecret: process.env.CLIENT_SECRET, // Client Secret
       scope: ["refresh_token", "api"] // App Scope
     },
-    isSetup(req, { hull, ship }) {
+    isSetup(req) {
       if (!!req.query.reset) return Promise.reject();
-      const { access_token, refresh_token, instance_url } = ship.private_settings || {};
+      const { access_token, refresh_token, instance_url } = req.hull.ship.private_settings || {};
 
-      if (access_token && refresh_token && instance_url) return Promise.resolve(ship);
+      if (access_token && refresh_token && instance_url) return Promise.resolve(req.hull.ship);
 
       return Promise.reject();
     },
-    onLogin: (req, { hull, ship }) => {
+    onLogin: (req) => {
       req.authParams = { ...req.body, ...req.query };
       return Promise.resolve(req.authParams);
     },
-    onAuthorize: (req, { hull, ship }) => {
+    onAuthorize: (req) => {
       const { refreshToken, params } = (req.account || {});
       const { access_token, instance_url } = params || {};
       const salesforce_login = _.get(req, "account.profile._raw.username");
-      return save(hull, ship, {
+      return req.hull.client.utils.settings.update({
         refresh_token: refreshToken,
-        access_token, instance_url, salesforce_login
+        access_token,
+        instance_url,
+        salesforce_login
       });
     },
     views: {
@@ -100,13 +102,26 @@ module.exports = function Server(app, options = {}) {
     handlers: {
       "user:update": ({ message }, { ship, hull }) => {
         try {
-          BatchSyncHandler.handle(message, { ship, hull });
+          BatchSyncHandler.handleUserUpdate(message, { ship, hull });
           if (process.env.LIBRATO_TOKEN && process.env.LIBRATO_USER) {
             librato.increment("user_report:update", 1, { source: ship.id });
           }
           return true;
         } catch (err) {
           Hull.logger.warn("Error in Users sync", err, err.stack);
+          return err;
+        }
+      },
+      "account:update": ({ message }, { ship, hull }) => {
+        console.log("account update:", message);
+        try {
+          BatchSyncHandler.handle(message, { ship, hull });
+          if (process.env.LIBRATO_TOKEN && process.env.LIBRATO_USER) {
+            librato.increment("account_report:update", 1, { source: ship.id });
+          }
+          return true;
+        } catch (err) {
+          Hull.logger.warn("Error in Accounts sync", err, err.stack);
           return err;
         }
       }
