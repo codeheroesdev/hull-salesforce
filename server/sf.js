@@ -35,11 +35,11 @@ function searchFieldsQuery(field, emails, mappings) {
   return `FIND {${findEmails.join(" OR ")}} IN ${field} FIELDS RETURNING ${Returning.join(", ")}`;
 }
 
-function searchEmailsQuery(emails, mappings) {
+export function searchEmailsQuery(emails, mappings) {
   return searchFieldsQuery("Email", emails, mappings);
 }
 
-function searchIdsQuery(ids, mappings) {
+export function searchIdsQuery(ids, mappings) {
   return searchFieldsQuery("Id", ids, mappings);
 }
 

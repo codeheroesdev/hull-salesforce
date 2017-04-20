@@ -2,7 +2,7 @@ import _ from "lodash";
 import Hull from "hull";
 import { EventEmitter } from "events";
 import cacheManager from "cache-manager";
-import { SF } from "./sf";
+import SF from "./sf";
 import { syncRecords } from "./sync";
 import Connection from "./connection";
 
