@@ -25,7 +25,7 @@ export default class BatchSyncHandler {
     if (!BatchSyncHandler.exiting) {
       return BatchSyncHandler
         .getHandler({ hull, ship, options })
-        .add(message, { hull, ship });
+        .addUser(message, { hull, ship });
     }
     const err = new Error("Exiting...");
     err.status = 503;
@@ -45,9 +45,13 @@ export default class BatchSyncHandler {
     };
 
     this.users = {};
+    this.accounts = {};
     this.status = "idle";
     this.flushLater = _.throttle(this.flush.bind(this), this.options.throttle);
-    this.stats = { flush: 0, add: 0, flushing: 0, success: 0, error: 0, pending: 0 };
+    this.stats = {
+      users: { flush: 0, add: 0, flushing: 0, success: 0, error: 0, pending: 0 },
+      accounts: { flush: 0, add: 0, flushing: 0, success: 0, error: 0, pending: 0 }
+    };
     setInterval(this.debugStats.bind(this), 10000);
   }
 
@@ -56,41 +60,74 @@ export default class BatchSyncHandler {
   }
 
   add(message, { hull, ship }) {
-    this.stats.add += 1;
-    this.stats.pending += 1;
     this.hull = hull;
     this.ship = ship;
-    this.users[message.user.id] = message;
+
+    if (message.user) {
+      this.users[message.user.id] = message;
+      this.stats.users.add += 1;
+      this.stats.users.pending += 1;
+    } else if (message.account) {
+      this.accounts[message.account.id] = message;
+      this.stats.accounts.add += 1;
+      this.stats.accounts.pending += 1;
+    } else {
+      return Promise.reject(new Error(`Unknown subject type for message: ${message}`));
+    }
 
     const { maxSize = MAX_BATCH_SIZE } = this.options;
 
     if (Object.keys(this.users).length > maxSize) {
-      this.flush();
+      this.flushUsers();
+    } else if (Object.keys(this.accounts).length > maxSize) {
+      this.flushAccounts();
     } else {
       this.flushLater();
     }
     return this;
   }
 
-  flush() {
+  flushUsers() {
+    const stats = this.stats.users;
     this.metric("flush");
-    this.stats.flush += 1;
-    this.stats.flushing += 1;
+    stats.flush += 1;
+    stats.flushing += 1;
     const users = _.values(this.users);
     this.users = {};
-    this.stats.pending -= users.length;
+    stats.pending -= users.length;
     return Agent
       .syncUsers(this.hull, this.ship, users)
-      .then((result) => {
+      .then(() => {
         this.metric("flush.success");
-        this.stats.success += 1;
-        this.stats.flushing -= 1;
+        stats.success += 1;
+        stats.flushing -= 1;
       }, (err) => {
         this.log("flush.error", err);
         this.metric("flush.error");
-        this.stats.error += 1;
-        this.stats.flushing -= 1;
+        stats.error += 1;
+        stats.flushing -= 1;
+      });
+  }
+
+  flushAccounts() {
+    const stats = this.stats.accounts;
+    this.metric("flush");
+    stats.flush += 1;
+    stats.flushing += 1;
+    const accounts = _.values(this.accounts);
+    this.accounts = {};
+    stats.pending -= accounts.length;
+    return Agent
+      .syncAccounts(this.hull, this.ship, accounts)
+      .then(() => {
+        this.metric("flush.success");
+        stats.success += 1;
+        stats.flushing -= 1;
+      }, (err) => {
+        this.log("flush.error", err);
+        this.metric("flush.error");
+        stats.error += 1;
+        stats.flushing -= 1;
       });
   }
 }
-

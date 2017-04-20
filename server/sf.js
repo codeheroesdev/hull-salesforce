@@ -18,7 +18,23 @@ function escapeSOSL(str) {
   return str.replace(RESERVED_CHARACTERS_REGEXP, c => `\\${c}`);
 }
 
-export class SF {
+function searchFieldsQuery(field, emails, mappings) {
+  const findEmails = emails.reduce((a, e) => {
+    e && e.length > 3 && a.push(`"${escapeSOSL(e)}"`);
+    return a;
+  }, []);
+
+  const Returning = Object.keys(mappings).reduce((ret, type) => {
+    const fieldsList = _.uniq(["Id"].concat(_.compact(Object.keys(mappings[type].fields || {}))));
+    ret.push(`${type}(${fieldsList.join(",")})`);
+    return ret;
+  }, []);
+  const qry = `FIND {${findEmails.join(" OR ")}} IN ${field} FIELDS RETURNING ${Returning.join(", ")}`;
+
+  return qry;
+}
+
+export default class SF {
   constructor(connection, logger) {
     this.connection = connection;
     this.logger = logger;
@@ -173,21 +189,8 @@ export class SF {
     });
   }
 
-  searchEmailsQuery(emails, mappings) {
-    const findEmails = emails.reduce((a, e) => {
-      e && e.length > 3 && a.push('"' + escapeSOSL(e) + '"');
-      return a;
-    }, []);
-
-    const Returning = Object.keys(mappings).reduce((ret, type) => {
-      const fieldsList = _.uniq(["Id"].concat(_.compact(Object.keys(mappings[type].fields || {}))));
-      ret.push(`${type}(${fieldsList.join(",")})`);
-      return ret;
-    }, []);
-    const qry = `FIND {${findEmails.join(" OR ")}} IN Email FIELDS RETURNING ${Returning.join(', ')}`;
-
-    return qry;
-  }
+  searchEmailsQuery = (emails, mappings) => searchFieldsQuery("Email", emails, mappings)
+  searchIdsQuery = (ids, mappings) => searchFieldsQuery("Id", ids, mappings)
 
   exec(fn) {
     const args = [].slice.call(arguments, 1);
@@ -211,6 +214,25 @@ export class SF {
         searchRecords.map((o) => {
           recs[o.Email] = recs[o.Email] || {};
           recs[o.Email][o.attributes.type] = o;
+        });
+        return recs;
+      }, {});
+    });
+  }
+
+  searchIds(ids = [], mappings) {
+    if (ids.length === 0) return Promise.resolve({});
+
+    const chunks = _.chunk(ids, 100);
+    const searches = chunks.map(
+      chunk => this.exec("search", this.searchIdsQuery(chunk, mappings))
+    );
+
+    return Promise.all(searches).then((results) => {
+      return results.reduce((recs, { searchRecords = [] }) => {
+        searchRecords.map((o) => {
+          recs[o.Id] = recs[o.Id] || {};
+          recs[o.Id][o.attributes.type] = o;
         });
         return recs;
       }, {});
