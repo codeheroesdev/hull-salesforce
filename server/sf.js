@@ -18,7 +18,7 @@ function escapeSOSL(str) {
   return str.replace(RESERVED_CHARACTERS_REGEXP, c => `\\${c}`);
 }
 
-export function searchEmailsQuery(emails, mappings) {
+function searchFieldsQuery(field, emails, mappings) {
   const findEmails = emails.reduce((a, e) => {
     if (e && e.length > 3) {
       a.push(`"${escapeSOSL(e)}"`);
@@ -31,13 +31,30 @@ export function searchEmailsQuery(emails, mappings) {
     ret.push(`${type}(${fieldsList.join(",")})`);
     return ret;
   }, []);
-  const qry = `FIND {${findEmails.join(" OR ")}} IN Email FIELDS RETURNING ${Returning.join(", ")}`;
 
-  return qry;
+  return `FIND {${findEmails.join(" OR ")}} IN ${field} FIELDS RETURNING ${Returning.join(", ")}`;
 }
 
+function searchEmailsQuery(emails, mappings) {
+  return searchFieldsQuery("Email", emails, mappings);
+}
 
-export class SF {
+function searchIdsQuery(ids, mappings) {
+  return searchFieldsQuery("Id", ids, mappings);
+}
+
+const DEFAULT_FIELDS = {
+  Account: ["Id", "Website"],
+  User: ["Id", "Email", "FirstName", "LastName"]
+};
+
+const REQUIRED_FIELDS = {
+  Account: ["Id"],
+  User: ["Email"]
+};
+
+
+export default class SF {
   constructor(connection, hullClient) {
     this.connection = connection;
     this.logger = hullClient.logger;
@@ -133,27 +150,13 @@ export class SF {
     });
   }
 
-  getDefaultFields(type) {
-    if (type === "Account") {
-      return ["Id", "Website"];
-    }
-    return ["Id", "Email", "FirstName", "LastName"];
-  }
-
-  getRequiredField(type) {
-    if (type === "Account") {
-      return "Id";
-    }
-    return "Email";
-  }
-
   /**
   * Fetch all records of a given type by ID
   *
   */
   getRecordsByIds(type, ids, options = {}) {
-    const defaultFields = this.getDefaultFields(type);
-    const requiredField = this.getRequiredField(type);
+    const defaultFields = DEFAULT_FIELDS[type];
+    const requiredField = REQUIRED_FIELDS[type];
     const fieldsList = (options && options.fields && options.fields.length > 0) ? Promise.resolve(options.fields) : this.getFieldsList(type).then(_.keys);
     return fieldsList.then((fields) => {
       const selectFields = _.uniq(fields.concat(defaultFields)).join(",");
@@ -165,8 +168,8 @@ export class SF {
 
   getAllRecords({ type, fields = [] }, onRecord) {
     // Default fields for Leads and Contacts
-    const defaultFields = this.getDefaultFields(type);
-    const requiredField = this.getRequiredField(type);
+    const defaultFields = DEFAULT_FIELDS[type];
+    const requiredField = REQUIRED_FIELDS[type];
     const selectFields = _.uniq(fields.concat(defaultFields)).join(",");
     return new Promise((resolve, reject) => {
       const soql = `SELECT ${selectFields} FROM ${type} WHERE ${requiredField} != null`;
@@ -241,6 +244,25 @@ export class SF {
         searchRecords.forEach((o) => {
           recs[o.Email] = recs[o.Email] || {};
           recs[o.Email][o.attributes.type] = o;
+        });
+        return recs;
+      }, {});
+    });
+  }
+
+  searchIds(ids = [], mappings) {
+    if (ids.length === 0) return Promise.resolve({});
+
+    const chunks = _.chunk(ids, 100);
+    const searches = chunks.map(
+      chunk => this.exec("search", searchIdsQuery(chunk, mappings))
+    );
+
+    return Promise.all(searches).then((results) => {
+      return results.reduce((recs, { searchRecords = [] }) => {
+        searchRecords.forEach((o) => {
+          recs[o.Id] = recs[o.Id] || {};
+          recs[o.Id][o.attributes.type] = o;
         });
         return recs;
       }, {});

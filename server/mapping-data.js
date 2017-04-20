@@ -72,8 +72,12 @@ const DEFAULT_MAPPING = {
     { service_attribute: "OwnerId", hull_top_level_trait: null, hull_trait: "owner_id", type: "string" }
   ],
   Account: [
-    { service_attribute: "Id", hull_top_level_trait: null, hull_trait: "id", type: "string" },
-    { service_attribute: "Website", hull_top_level_trait: "domain", hull_trait: "domain", type: "string" }
+    { service_attribute: "Id", hull_top_level_trait: "external_id", hull_trait: "id", type: "string" },
+    { service_attribute: "AnnualRevenue", hull_top_level_trait: null, hull_trait: "annual_revenue", type: "string" },
+    { service_attribute: "NumberOfEmployees", hull_top_level_trait: null, hull_trait: "number_of_employees", type: "int" },
+    { service_attribute: "Industry", hull_top_level_trait: null, hull_trait: "industry", type: "string" },
+    { service_attribute: "Phone", hull_top_level_trait: null, hull_trait: "phone", type: "string" },
+    { service_attribute: "Website", hull_top_level_trait: "domain", hull_trait: "website", type: "string" },
   ]
 };
 

@@ -2,7 +2,6 @@ import _ from "lodash";
 import Hull from "hull";
 import { EventEmitter } from "events";
 import cacheManager from "cache-manager";
-
 import { SF } from "./sf";
 import { syncRecords } from "./sync";
 import Connection from "./connection";
@@ -33,6 +32,22 @@ export default class Agent extends EventEmitter {
     if (matchingUsers.length > 0) {
       result = agent.connect().then(() => {
         return agent.syncUsers(matchingUsers.map(u => u.user));
+      });
+    }
+
+    return result;
+  }
+
+  static syncAccounts(hull, ship, accounts, options = {}) {
+    const { applyFilters = true } = options;
+    const { organization, secret } = hull.configuration();
+    const config = buildConfigFromShip(ship, organization, secret);
+    const agent = new Agent(config);
+    const matchingAccounts = applyFilters ? agent.getAccountsMatchingSegments(accounts) : accounts;
+    let result = Promise.resolve({});
+    if (matchingAccounts.length > 0) {
+      result = agent.connect().then(() => {
+        return agent.syncAccounts(matchingAccounts.map(a => a.account));
       });
     }
 
@@ -172,12 +187,22 @@ export default class Agent extends EventEmitter {
     return this._connect;
   }
 
-  getUsersMatchingSegments(users) {
-    const { segmentIds } = this.config.sync || {};
-    return users.filter((user) => {
-      const ids = (user.segments || []).map(s => s.id);
+  getSubjectsMatchingSegmentsIds(subjects, segmentIds) {
+    return subjects.filter(subject => {
+      const ids = (subject.segments || []).map(s => s.id);
       return _.intersection(ids, segmentIds).length > 0;
     });
+  }
+
+  getUsersMatchingSegments(users) {
+    const { segmentIds } = this.config.sync || {};
+    return this.getSubjectsMatchingSegmentsIds(users, segmentIds);
+  }
+
+  getAccountsMatchingSegments(accounts) {
+    // TODO: Define config format for accout segments
+    const { segmentIds } = this.config.sync_accounts || {};
+    return this.getSubjectsMatchingSegmentsIds(accounts, segmentIds);
   }
 
   getFieldsSchema() {
@@ -254,15 +279,13 @@ export default class Agent extends EventEmitter {
         records.forEach((record) => {
           const traits = this.getRecordTraits(type, record);
           if (!_.isEmpty(traits)) {
-            let subject;
             if (type === "Account") {
               this.hull.logger.info("incoming.account", { domain: record.Website, ...traits });
-              subject = this.hull.asAccount({ domain: record.Website });
+              promises.push(this.hull.asAccount({ external_id: record.Id, domain: record.Website }).traits(traits));
             } else {
               this.hull.logger.info("incoming.user", { email: record.Email, ...traits });
-              subject = this.hull.asUser({ email: record.Email });
+              promises.push(this.hull.asUser({ email: record.Email }).traits(traits));
             }
-            promises.push(subject.traits(traits));
           }
         });
       });
@@ -283,6 +306,32 @@ export default class Agent extends EventEmitter {
           _.map(records, record => this.hull.logger.info("outgoing.user", record));
           return { recordType, results, records };
         });
+      });
+      return Promise.all(upsertResults).then((results) => {
+        return results.reduce((rr, r) => {
+          if (r && r.recordType) {
+            rr[r.recordType] = r;
+          }
+          return rr;
+        }, {});
+      });
+    });
+  }
+
+  syncAccounts(accounts) {
+    const mappings = this.config.mappings;
+    const ids = accounts.map(a => a.id);
+    const sfRecords = this.sf.searchIds(ids, mappings);
+    return sfRecords.then((searchResults) => {
+      const recordsByType = syncRecords(searchResults, accounts, { mappings });
+      const upsertResults = ["Account"].map((recordType) => {
+        const records = recordsByType[recordType];
+        if (records && records.length > 0) {
+          return this.sf.upsert(recordType, records, "Id").then((results) => {
+            _.map(records, record => this.hull.logger.info("outgoing.account", record));
+            return { recordType, results, records };
+          });
+        }
       });
       return Promise.all(upsertResults).then((results) => {
         return results.reduce((rr, r) => {
