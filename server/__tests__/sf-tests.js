@@ -15,7 +15,7 @@ const Mappings = {
 
 describe("searchEmailsQuery", () => {
   it("build a query from a list of emails", () => {
-    const SF = require("../sf").SF;
+    const SF = require("../sf").default;
     const sf = new SF();
     const emails = ["bob@bob.com", "jon@jon.com"];
     const qry = sf.searchEmailsQuery(emails, Mappings);
