@@ -53,7 +53,7 @@ export default class BatchSyncHandler {
   }
 
   debugStats() {
-    this.hull.logger.info('batch.stats', this.stats);
+    this.hull.logger.debug('batch.stats', this.stats);
   }
 
   log(msg, data) {
