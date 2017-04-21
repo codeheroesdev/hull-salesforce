@@ -8,6 +8,8 @@ import { EventEmitter } from 'events';
 import jsforce from 'jsforce';
 import cacheManager from 'cache-manager';
 
+Hull.logger.transports.console.json = true;
+
 function log(a,b,c) {
   if (process.env.DEBUG) {
     console.log(a,b,c)
@@ -129,7 +131,7 @@ export default class Agent extends EventEmitter {
             reject(err);
           } else {
             this.emit('connect', userInfo);
-            this.sf = new SF(conn);
+            this.sf = new SF(conn, new Hull(this.config.hull));
             this.userInfo = userInfo;
             resolve(conn);
           }
@@ -158,8 +160,8 @@ export default class Agent extends EventEmitter {
     const conn = new Connection(this.config.salesforce);
     conn.setShipId(shipId);
 
-    this.sf = new SF(conn);
     this.hull = new Hull(this.config.hull);
+    this.sf = new SF(conn, this.hull);
     this._connect = Promise.resolve(conn);
 
     conn.on("refresh", (access_token, res) => {

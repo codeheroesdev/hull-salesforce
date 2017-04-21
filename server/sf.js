@@ -27,8 +27,9 @@ function log(a,b,c) {
 
 
 export class SF {
-  constructor(connection) {
+  constructor(connection, hullClient) {
     this.connection = connection;
+    this.logger = hullClient.logger;
   }
 
   upsert(type, input, externalIDFieldName='Email') {
@@ -49,6 +50,10 @@ export class SF {
         if (err) {
           increment('salesforce:errors', 1, { source: this.connection._shipId });
           log('upsert error', JSON.stringify({ err, res, externalIDFieldName, input }));
+          this.logger.error("outgoing.user.error", {
+            errors: err,
+            email: input[0].Email
+          });
           reject(err);
         } else {
           console.log("upsert success", JSON.stringify({ err, res, externalIDFieldName, input }));
@@ -57,7 +62,19 @@ export class SF {
               increment('salesforce:errors', 1, { source: this.connection._shipId });
               if (r.success !== 'true') {
                 console.log('upsert error', JSON.stringify({ res: r, input: input[idx] }));
+                this.logger.error("outgoing.user.error", {
+                  errors: r.errors,
+                  email: input[idx].Email
+                });
+              } else {
+                this.logger.info("outgoing.user.success", {
+                  email: input[idx].Email
+                });
               }
+            });
+          } else {
+            this.logger.info("outgoing.user.success", {
+              email: input[0].Email
             });
           }
           resolve(res);
@@ -73,6 +90,10 @@ export class SF {
       return SObject.upsertBulk(input, extIdField, (err, res)=> {
         if (err) {
           console.log('upsert error', JSON.stringify({ err, res, extIdField, input }));
+          this.logger("outgoing.user.error", {
+            email: input[0].Email,
+            errors: err
+          });
           reject(err);
         } else {
           if (_.isArray(res)) {
@@ -80,6 +101,10 @@ export class SF {
               increment('salesforce:errors', 1, { source: this.connection._shipId });
               if (r.success.toString() !== 'true') {
                 console.log('bulk upsert error', JSON.stringify({ res: r, input: input[idx] }));
+                this.logger("outgoing.user.error", {
+                  email: input[idx].Email,
+                  errors: r.errors
+                });
               }
             });
           }
