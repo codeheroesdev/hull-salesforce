@@ -8,7 +8,7 @@
     "build:server": "./node_modules/.bin/babel server -d build --ignore __tests__",
     "start": "./node_modules/.bin/nf start",
     "start:dev": "./node_modules/.bin/nf -j Procfile.dev start",
-    "test": "npm run test:lint && npm run test:modules && jest",
+    "test": "jest",
     "test:lint": "eslint server",
     "test:modules": "npm outdated --depth=0",
     "clean": "./node_modules/.bin/rimraf build",
