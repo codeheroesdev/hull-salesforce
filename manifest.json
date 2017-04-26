@@ -161,6 +161,42 @@
       "default": false
     },
     {
+      "name" : "accounts_mapping",
+      "title" : "List of Account fields to push to Salesforce",
+      "type" : "array",
+      "format" : "table",
+      "default" : [
+        { "hull_field_name" : "domain", "salesforce_field_name" : "Website", "default_value" : "[Unknown]", "overwrite" : false }
+      ],
+      "items" : {
+        "type" : "object",
+        "properties" : {
+          "hull_field_name" : {
+            "type" : "string",
+            "format" : "trait",
+            "title" : "Hull Field"
+          },
+          "salesforce_field_name" : {
+            "type" : "string",
+            "title" : "Salesforce Field",
+            "format" : "select",
+            "options" : {
+              "loadOptions": "/schema/contact_updateable"
+            }
+          },
+          "overwrite" : {
+            "type" : "boolean",
+            "title" : "Hull overwrites Salesforce",
+            "default" : false
+          }
+        },
+        "required" : [
+          "hull_field_name",
+          "salesforce_field_name"
+        ]
+      }
+    },
+    {
       "name" : "fetch_account_fields",
       "title" : "List of Account fields to fetch from Salesforce",
       "type" : "array",
