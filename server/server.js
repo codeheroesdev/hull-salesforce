@@ -112,6 +112,7 @@ module.exports = function Server(app, options = {}) {
           return err;
         }
       },
+      /*
       "account:update": ({ message }, { ship, hull }) => {
         console.log("account update:", message);
         try {
@@ -125,6 +126,7 @@ module.exports = function Server(app, options = {}) {
           return err;
         }
       }
+      */
     }
   }));
 
