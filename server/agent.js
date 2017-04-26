@@ -20,6 +20,14 @@ function traitName(source, hullGroupField, salesforceField) {
 
 const Cache = cacheManager.caching({ store: "memory", max: 100, ttl: 60 });
 
+function getSubjectsMatchingSegmentsIds(subjects, segmentIds) {
+  return subjects.filter((subject) => {
+    const ids = (subject.segments || []).map(s => s.id);
+    return _.intersection(ids, segmentIds).length > 0;
+  });
+}
+
+
 export default class Agent extends EventEmitter {
 
   static syncUsers(hull, ship, users, options = {}) {
@@ -187,22 +195,15 @@ export default class Agent extends EventEmitter {
     return this._connect;
   }
 
-  getSubjectsMatchingSegmentsIds(subjects, segmentIds) {
-    return subjects.filter(subject => {
-      const ids = (subject.segments || []).map(s => s.id);
-      return _.intersection(ids, segmentIds).length > 0;
-    });
-  }
-
   getUsersMatchingSegments(users) {
     const { segmentIds } = this.config.sync || {};
-    return this.getSubjectsMatchingSegmentsIds(users, segmentIds);
+    return getSubjectsMatchingSegmentsIds(users, segmentIds);
   }
 
   getAccountsMatchingSegments(accounts) {
     // TODO: Define config format for accout segments
     const { segmentIds } = this.config.sync_accounts || {};
-    return this.getSubjectsMatchingSegmentsIds(accounts, segmentIds);
+    return getSubjectsMatchingSegmentsIds(accounts, segmentIds);
   }
 
   getFieldsSchema() {
@@ -247,21 +248,21 @@ export default class Agent extends EventEmitter {
     const { mappings } = this.config;
     return Promise.all(_.map(mappings, ({ type, fetchFields }) => {
       const fields = _.keys(fetchFields);
-      if (!fields || !!fields.length) return null;
-      return this.sf.getAllRecords({ type, fields }, (record = {}) => {
-        const traits = this.getRecordTraits(type, record);
-        if (!_.isEmpty(traits)) {
-          let subject;
-          if (type === "Account") {
-            this.hull.logger.info("incoming.account", { domain: record.Website, ...traits });
-            subject = this.hull.asAccount({ domain: record.Website });
-          } else {
-            this.hull.logger.info("incoming.user", { email: record.Email, ...traits });
-            subject = this.hull.asUser({ email: record.Email });
+      if (fields && fields.length > 0) {
+        return this.sf.getAllRecords({ type, fields }, (record = {}) => {
+          const traits = this.getRecordTraits(type, record);
+          if (!_.isEmpty(traits)) {
+            if (type === "Account" && this.config.settings.fetch_accounts) {
+              this.hull.logger.info("incoming.account", { domain: record.Website, ...traits });
+              this.hull.asAccount({ domain: record.Website }).traits(traits);
+            } else if (type === "Lead" || type === "Contact") {
+              this.hull.logger.info("incoming.user", { email: record.Email, ...traits });
+              this.hull.asUser({ email: record.Email }).traits(traits);
+            }
           }
-          subject.traits(traits);
-        }
-      });
+        });
+      }
+      return null;
     }));
   }
 
@@ -279,10 +280,10 @@ export default class Agent extends EventEmitter {
         records.forEach((record) => {
           const traits = this.getRecordTraits(type, record);
           if (!_.isEmpty(traits)) {
-            if (type === "Account") {
+            if (type === "Account" && this.config.settings.fetch_accounts) {
               this.hull.logger.info("incoming.account", { domain: record.Website, ...traits });
               promises.push(this.hull.asAccount({ external_id: record.Id, domain: record.Website }).traits(traits));
-            } else {
+            } else if (type === "Lead" || type === "Contact") {
               this.hull.logger.info("incoming.user", { email: record.Email, ...traits });
               promises.push(this.hull.asUser({ email: record.Email }).traits(traits));
             }
@@ -324,7 +325,7 @@ export default class Agent extends EventEmitter {
     const sfRecords = this.sf.searchIds(ids, mappings);
     return sfRecords.then((searchResults) => {
       const recordsByType = syncRecords(searchResults, accounts, { mappings });
-      const upsertResults = ["Account"].map((recordType) => {
+      const upsertResults = ["Account"].forEach((recordType) => {
         const records = recordsByType[recordType];
         if (records && records.length > 0) {
           return this.sf.upsert(recordType, records, "Id").then((results) => {
@@ -332,6 +333,7 @@ export default class Agent extends EventEmitter {
             return { recordType, results, records };
           });
         }
+        return false;
       });
       return Promise.all(upsertResults).then((results) => {
         return results.reduce((rr, r) => {

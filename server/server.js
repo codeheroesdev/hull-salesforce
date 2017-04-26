@@ -100,6 +100,7 @@ module.exports = function Server(app, { Hull, hostSecret, port, clientConfig = {
           return err;
         }
       },
+      /*
       "account:update": ({ message }, { ship, hull }) => {
         console.log("account update:", message);
         try {
@@ -113,6 +114,7 @@ module.exports = function Server(app, { Hull, hostSecret, port, clientConfig = {
           return err;
         }
       }
+      */
     }
   }));
 
