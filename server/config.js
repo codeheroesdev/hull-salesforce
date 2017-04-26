@@ -119,6 +119,7 @@ export function buildConfigFromShip(ship, organization, secret) {
     refresh_token,
     instance_url,
     synchronized_segments,
+    fetch_accounts,
     salesforce_login,
     salesforce_password,
     salesforce_login_url
@@ -152,6 +153,7 @@ export function buildConfigFromShip(ship, organization, secret) {
 
   return {
     hull: { organization, id: ship.id, secret },
+    settings: { fetch_accounts },
     salesforce: { ...credentials, oauth2 },
     sync: {
       segmentIds: synchronized_segments || [],

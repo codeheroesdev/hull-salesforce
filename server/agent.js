@@ -251,15 +251,13 @@ export default class Agent extends EventEmitter {
         return this.sf.getAllRecords({ type, fields }, (record = {}) => {
           const traits = this.getRecordTraits(type, record);
           if (!_.isEmpty(traits)) {
-            let subject;
-            if (type === "Account") {
+            if (type === "Account" && this.config.settings.fetch_accounts) {
               this.hull.logger.info("incoming.account", { domain: record.Website, ...traits });
-              subject = this.hull.asAccount({ domain: record.Website });
-            } else {
+              this.hull.asAccount({ domain: record.Website }).traits(traits);
+            } else if (type === "Lead" || type === "Contact") {
               this.hull.logger.info("incoming.user", { email: record.Email, ...traits });
-              subject = this.hull.asUser({ email: record.Email });
+              this.hull.asUser({ email: record.Email }).traits(traits);
             }
-            subject.traits(traits);
           }
         });
       }
@@ -280,10 +278,10 @@ export default class Agent extends EventEmitter {
         records.map((record) => {
           const traits = this.getRecordTraits(type, record);
           if (!_.isEmpty(traits)) {
-            if (type === "Account") {
+            if (type === "Account" && this.config.settings.fetch_accounts) {
               this.hull.logger.info("incoming.account", { domain: record.Website, ...traits });
               promises.push(this.hull.asAccount({ external_id: record.Id, domain: record.Website }).traits(traits));
-            } else {
+            } else if (type === "Lead" || type === "Contact") {
               this.hull.logger.info("incoming.user", { email: record.Email, ...traits });
               promises.push(this.hull.asUser({ email: record.Email }).traits(traits));
             }

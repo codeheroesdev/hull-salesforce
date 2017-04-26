@@ -146,6 +146,28 @@
       "options" : {
         "loadOptions" : "/schema/contact"
       }
+    },
+    {
+      "name": "accounts",
+      "title": "Accounts sync",
+      "format": "title",
+      "type": "string"
+    },
+    {
+      "name": "fetch_accounts",
+      "title": "Fetch Accounts",
+      "description": "Fetch Salesforce Accounts to Hull",
+      "type": "boolean",
+      "default": false
+    },
+    {
+      "name" : "fetch_account_fields",
+      "title" : "List of Account fields to fetch from Salesforce",
+      "type" : "array",
+      "format" : "select",
+      "options" : {
+        "loadOptions" : "/schema/account"
+      }
     }
   ],
   "schedules": [
