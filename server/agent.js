@@ -2,9 +2,11 @@ import _ from "lodash";
 import Hull from "hull";
 import { EventEmitter } from "events";
 import cacheManager from "cache-manager";
+
 import { SF } from "./sf";
 import { syncRecords } from "./sync";
 import Connection from "./connection";
+
 import { buildConfigFromShip } from "./config";
 
 function toUnderscore(str) {
@@ -51,8 +53,8 @@ export default class Agent extends EventEmitter {
     const { organization, secret } = hull.configuration();
     const config = buildConfigFromShip(ship, organization, secret);
     const agent = new Agent(config);
-    const last_sync_at = parseInt(_.get(ship, "settings.last_sync_at"), 10);
-    const since = new Date(last_sync_at - 60000);
+    const lastSyncAt = parseInt(_.get(ship, "settings.last_sync_at"), 10);
+    const since = new Date(lastSyncAt - 60000);
     if (since && since.getYear() === new Date().getYear()) {
       options.since = since;
     }
@@ -98,11 +100,10 @@ export default class Agent extends EventEmitter {
       return this.connectWithToken();
     } else if (salesforce.login && salesforce.password) {
       return this.connectWithPassword();
-    } else {
-      const err = new Error("Missing credentials");
-      err.status = 403;
-      return Promise.reject(err);
     }
+    const err = new Error("Missing credentials");
+    err.status = 403;
+    return Promise.reject(err);
   }
 
   connectWithPassword() {
@@ -113,12 +114,13 @@ export default class Agent extends EventEmitter {
       Hull.logger.warn("Sync Error ", err);
     });
 
+    const { login, password, loginUrl } = this.config.salesforce;
+
     const connect = new Promise((resolve, reject) => {
       // Hull
       this.hull = new Hull(this.config.hull);
 
       // Salesforce
-      const { login, password, loginUrl } = this.config.salesforce;
       const conn = new Connection({ loginUrl });
       conn.setShipId(this.config.hull.id);
       if (login && password) {
@@ -128,7 +130,7 @@ export default class Agent extends EventEmitter {
             reject(err);
           } else {
             this.emit("connect", userInfo);
-            this.sf = new SF(conn, this.hull.logger);
+            this.sf = new SF(conn, new Hull(this.config.hull));
             this.userInfo = userInfo;
             resolve(conn);
           }
@@ -154,10 +156,10 @@ export default class Agent extends EventEmitter {
     conn.setShipId(shipId);
 
     this.hull = new Hull(this.config.hull);
-    this.sf = new SF(conn, this.hull.logger);
+    this.sf = new SF(conn, this.hull);
     this._connect = Promise.resolve(conn);
 
-    conn.on("refresh", (access_token, res) => {
+    conn.on("refresh", (access_token) => {
       this.hull.get(shipId).then(({ private_settings }) => {
         this.hull.put(shipId, {
           private_settings: {
@@ -173,7 +175,7 @@ export default class Agent extends EventEmitter {
 
   getUsersMatchingSegments(users) {
     const { segmentIds } = this.config.sync || {};
-    return users.filter(user => {
+    return users.filter((user) => {
       const ids = (user.segments || []).map(s => s.id);
       return _.intersection(ids, segmentIds).length > 0;
     });
@@ -221,17 +223,14 @@ export default class Agent extends EventEmitter {
     const { mappings } = this.config;
     return Promise.all(_.map(mappings, ({ type, fetchFields }) => {
       const fields = _.keys(fetchFields);
-      if (fields && fields.length > 0) {
-        return this.sf.getAllRecords({ type, fields }, (record = {}) => {
-          const traits = this.getRecordTraits(type, record);
-          if (!_.isEmpty(traits)) {
-            this.hull.logger.info("incoming.user", { email: record.Email, ...traits });
-            return this.hull
-              .as({ email: record.Email })
-              .traits(traits);
-          }
-        });
-      }
+      if (!fields || fields.length === 0) return null;
+      return this.sf.getAllRecords({ type, fields }, (record = {}) => {
+        const traits = this.getRecordTraits(type, record);
+        if (!_.isEmpty(traits)) {
+          this.hull.logger.info("incoming.user", { email: record.Email, ...traits });
+          this.hull.as({ email: record.Email }).traits(traits);
+        }
+      });
     }));
   }
 
@@ -245,8 +244,8 @@ export default class Agent extends EventEmitter {
       return { type, fields: fetchFields, records: [] };
     })).then((changes) => {
       const promises = [];
-      changes.map(({ type, records }) => {
-        records.map((record) => {
+      changes.forEach(({ type, records }) => {
+        records.forEach((record) => {
           const traits = this.getRecordTraits(type, record);
           if (!_.isEmpty(traits)) {
             this.hull.logger.info("incoming.user", { email: record.Email, ...traits });
@@ -267,13 +266,12 @@ export default class Agent extends EventEmitter {
     return sfRecords.then((searchResults) => {
       const recordsByType = syncRecords(searchResults, users, { mappings });
       const upsertResults = ["Lead", "Contact"].map((recordType) => {
-        const records = recordsByType[recordType];
-        if (records && records.length > 0) {
-          return this.sf.upsert(recordType, records).then((results) => {
-            _.map(records, record => this.hull.logger.info("outgoing.user", record));
-            return { recordType, results, records };
-          });
-        }
+        const records = recordsByType[recordType] || [];
+        if (!records.length) return null;
+        return this.sf.upsert(recordType, records).then((results) => {
+          _.map(records, record => this.hull.logger.info("outgoing.user", record));
+          return { recordType, results, records };
+        });
       });
       return Promise.all(upsertResults).then((results) => {
         return results.reduce((rr, r) => {

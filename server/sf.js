@@ -7,24 +7,43 @@ function increment(metric, value, options) {
     if (librato && librato.increment) {
       librato.increment(metric, value, options);
     }
-  } catch(err) {
+  } catch (err) {
     // console.warn('Librato error', err)
   }
 }
 
-const RESERVED_CHARACTERS_REGEXP = /\?|\&|\||\!|\{|\}|\[|\]|\(|\)|\^|\~|\*|\:|\+|\-|\"|\'/ig;
+const RESERVED_CHARACTERS_REGEXP = /\?|&|\||!|\{|\}|\[|]|\(|\)|\^|~|\*|:|\+|-|"|'/ig;
 
 function escapeSOSL(str) {
   return str.replace(RESERVED_CHARACTERS_REGEXP, c => `\\${c}`);
 }
 
+export function searchEmailsQuery(emails, mappings) {
+  const findEmails = emails.reduce((a, e) => {
+    if (e && e.length > 3) {
+      a.push(`"${escapeSOSL(e)}"`);
+    }
+    return a;
+  }, []);
+
+  const Returning = Object.keys(mappings).reduce((ret, type) => {
+    const fieldsList = _.uniq(["Id"].concat(_.compact(Object.keys(mappings[type].fields || {}))));
+    ret.push(`${type}(${fieldsList.join(",")})`);
+    return ret;
+  }, []);
+  const qry = `FIND {${findEmails.join(" OR ")}} IN Email FIELDS RETURNING ${Returning.join(", ")}`;
+
+  return qry;
+}
+
+
 export class SF {
-  constructor(connection, logger) {
+  constructor(connection, hullClient) {
     this.connection = connection;
-    this.logger = logger;
+    this.logger = hullClient.logger;
   }
 
-  upsert(type, input, externalIDFieldName = "Email") {
+  upsert(type, input = [], externalIDFieldName = "Email") {
     return input.length > 99 ?
       this._upsertBulk(type, input, externalIDFieldName) :
       this._upsertSoap(type, input, externalIDFieldName);
@@ -41,17 +60,28 @@ export class SF {
       return this.connection.soap._invoke("upsert", message, false, (err, res) => {
         if (err) {
           increment("salesforce:errors", 1, { source: this.connection._shipId });
-          this.logger.log("upsert error", JSON.stringify({ err, res, externalIDFieldName, input }));
+          this.logger.error("outgoing.user.error", {
+            res, externalIDFieldName, input, errors: err, email: input[0].Email
+          });
           reject(err);
         } else {
           this.logger.log("upsert success", JSON.stringify({ err, res, externalIDFieldName, input }));
           if (_.isArray(res)) {
-            res.map((r, idx) => {
+            res.forEach((r, idx) => {
+              const email = input[idx].Email;
               increment("salesforce:errors", 1, { source: this.connection._shipId });
               if (r.success !== "true") {
-                this.logger.log("upsert error", JSON.stringify({ res: r, input: input[idx] }));
+                this.logger.log("upsert error", { res: r, input: input[idx] });
+                this.logger.error("outgoing.user.error", {
+                  errors: r.errors,
+                  email
+                });
+              } else {
+                this.logger.info("outgoing.user.success", { email });
               }
             });
+          } else {
+            this.logger.info("outgoing.user.success", { email: input[0].Email });
           }
           resolve(res);
         }
@@ -61,21 +91,34 @@ export class SF {
 
   _upsertBulk(type, input = [], extIdField = "Email") {
     const SObject = this.connection.sobject(type);
-    this.logger.log("upsert", JSON.stringify({ type, records: input.length }));
+    const bulkId = _.uniqueId(`bulk-${type}-`);
+    this.logger.info("upsert.start", { bulkId, type, records: input.length });
     return new Promise((resolve, reject) => {
       return SObject.upsertBulk(input, extIdField, (err, res) => {
         if (err) {
-          this.logger.log("upsert error", JSON.stringify({ err, res, extIdField, input }));
+          increment("salesforce:errors", 1, { source: this.connection._shipId });
+          this.logger.error("outgoing.user.error", {
+            bulkId, res, extIdField, input, errors: err, email: input[0].Email
+          });
           reject(err);
         } else {
+          const stats = { success: 0, error: 0 };
           if (_.isArray(res)) {
-            res.map((r, idx) => {
-              increment("salesforce:errors", 1, { source: this.connection._shipId });
+            res.forEach((r, idx) => {
+              const email = input[idx].Email;
               if (r.success.toString() !== "true") {
-                this.logger.log("bulk upsert error", JSON.stringify({ res: r, input: input[idx] }));
+                stats.error += 1;
+                increment("salesforce:errors", 1, { source: this.connection._shipId });
+                this.logger.error("outgoing.user.error", { bulkId, email, errors: r.errors });
+              } else {
+                stats.success += 1;
+                this.logger.info("outgoing.user.success", { bulkId, email });
               }
             });
+          } else {
+            this.logger.info("upsert.debug", { res });
           }
+          this.logger.info("upsert.done", { bulkId, type, records: input.length, ...stats });
           resolve(res);
         }
       });
@@ -130,11 +173,11 @@ export class SF {
         until.toISOString(),
         (err, res = {}) => {
           if (err) {
-            return reject(err);
-          }
-          if (res.ids && res.ids.length > 0) {
-            const chunks = _.chunk(res.ids, 100)
-              .map(ids => this.getRecordsByIds(type, ids, { fields }));
+            reject(err);
+          } else if (res.ids && res.ids.length > 0) {
+            const chunks = _.chunk(res.ids, 100).map(
+              ids => this.getRecordsByIds(type, ids, { fields })
+            );
 
             Promise.all(chunks)
               .then(_.flatten)
@@ -153,27 +196,14 @@ export class SF {
     });
   }
 
-  searchEmailsQuery(emails, mappings) {
-    const findEmails = emails.reduce((a, e) => {
-      e && e.length > 3 && a.push('"' + escapeSOSL(e) + '"');
-      return a;
-    }, []);
-
-    const Returning = Object.keys(mappings).reduce((ret, type) => {
-      const fieldsList = _.uniq(["Id"].concat(_.compact(Object.keys(mappings[type].fields || {}))));
-      ret.push(`${type}(${fieldsList.join(",")})`);
-      return ret;
-    }, []);
-    const qry = `FIND {${findEmails.join(" OR ")}} IN Email FIELDS RETURNING ${Returning.join(', ')}`;
-
-    return qry;
-  }
-
-  exec(fn) {
-    const args = [].slice.call(arguments, 1);
+  exec(fn, ...args) {
     return new Promise((resolve, reject) => {
       this.connection[fn].apply(this.connection, [...args, (err, res) => {
-        err ? reject(err) : resolve(res);
+        if (err) {
+          reject(err);
+        } else {
+          resolve(res);
+        }
       }]);
     });
   }
@@ -183,12 +213,12 @@ export class SF {
 
     const chunks = _.chunk(emails, 100);
     const searches = chunks.map(
-      chunk => this.exec("search", this.searchEmailsQuery(chunk, mappings))
+      chunk => this.exec("search", searchEmailsQuery(chunk, mappings))
     );
 
     return Promise.all(searches).then((results) => {
       return results.reduce((recs, { searchRecords = [] }) => {
-        searchRecords.map((o) => {
+        searchRecords.forEach((o) => {
           recs[o.Email] = recs[o.Email] || {};
           recs[o.Email][o.attributes.type] = o;
         });

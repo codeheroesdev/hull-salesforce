@@ -18,7 +18,8 @@ export default class BatchSyncHandler {
   }
 
   static getHandler({ hull, ship, options }) {
-    return HANDLERS[ship.id] = HANDLERS[ship.id] || new BatchSyncHandler({ hull, ship, options });
+    const handler = HANDLERS[ship.id] = HANDLERS[ship.id] || new BatchSyncHandler({ hull, ship, options });
+    return handler;
   }
 
   static handle(message, { hull, ship, options }) {
@@ -41,7 +42,7 @@ export default class BatchSyncHandler {
       ...options
     };
     this.metric = (metric, value = 1) => {
-      this.hull.logger.warn("metric", `bulk.${metric}`, value);
+      this.hull.logger.info("metric", `bulk.${metric}`, value);
     };
 
     this.users = {};
@@ -52,7 +53,7 @@ export default class BatchSyncHandler {
   }
 
   debugStats() {
-    this.hull.logger.info("batch.stats", this.stats);
+    this.hull.logger.debug("batch.stats", this.stats);
   }
 
   add(message, { hull, ship }) {
@@ -81,12 +82,13 @@ export default class BatchSyncHandler {
     this.stats.pending -= users.length;
     return Agent
       .syncUsers(this.hull, this.ship, users)
-      .then((result) => {
+      .then(() => {
+        this.hull.logger.info("flush.success", { users: users.length });
         this.metric("flush.success");
         this.stats.success += 1;
         this.stats.flushing -= 1;
       }, (err) => {
-        this.log("flush.error", err);
+        this.hull.logger.error("flush.error", err);
         this.metric("flush.error");
         this.stats.error += 1;
         this.stats.flushing -= 1;
