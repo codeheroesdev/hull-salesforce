@@ -96,6 +96,9 @@ export default class Agent extends EventEmitter {
   connect() {
     if (this._connect) return this._connect;
     const { salesforce } = this.config;
+
+    this.hull = new Hull(this.config.hull);
+
     if (salesforce.accessToken && salesforce.instanceUrl) {
       return this.connectWithToken();
     } else if (salesforce.login && salesforce.password) {
@@ -111,15 +114,12 @@ export default class Agent extends EventEmitter {
     // Configure with Salesforce and Hull credentials
 
     this.on("error", (err) => {
-      Hull.logger.warn("Sync Error ", err);
+      this.hull.logger.warn("sync.error ", err);
     });
 
     const { login, password, loginUrl } = this.config.salesforce;
 
     const connect = new Promise((resolve, reject) => {
-      // Hull
-      this.hull = new Hull(this.config.hull);
-
       // Salesforce
       const conn = new Connection({ loginUrl });
       conn.setShipId(this.config.hull.id);
@@ -141,7 +141,7 @@ export default class Agent extends EventEmitter {
     });
 
     connect.catch((err) => {
-      Hull.logger.error("Error establishing connection with Salesforce: for ", login, err);
+      this.hull.logger.error("connect.error", { login, err });
       return err;
     });
 
@@ -155,7 +155,6 @@ export default class Agent extends EventEmitter {
     const conn = new Connection(this.config.salesforce);
     conn.setShipId(shipId);
 
-    this.hull = new Hull(this.config.hull);
     this.sf = new SF(conn, this.hull);
     this._connect = Promise.resolve(conn);
 
