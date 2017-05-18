@@ -3,7 +3,7 @@ import Hull from "hull";
 import { EventEmitter } from "events";
 import cacheManager from "cache-manager";
 import SF from "./sf";
-import { syncRecords } from "./sync";
+import { syncUsers, syncAccounts } from "./sync";
 import Connection from "./connection";
 import { buildConfigFromShip } from "./config";
 
@@ -17,39 +17,42 @@ function traitName(source, hullGroupField, salesforceField) {
   return !_.isNil(hullGroupField) ? `${source}/${hullGroupField}` : `${source}/${toUnderscore(salesforceField)}`;
 }
 
+function getUsersMatchingSegments(users, segmentIds = []) {
+  return users.filter((user) => {
+    const ids = (user.segments || []).map(s => s.id);
+    return _.intersection(ids, segmentIds).length > 0;
+  });
+}
+
 const Cache = cacheManager.caching({ store: "memory", max: 100, ttl: 60 });
 
 export default class Agent extends EventEmitter {
 
-  static syncUsers(hull, ship, users, options = {}) {
-    const { applyFilters = true } = options;
-    const { organization, secret } = hull.configuration();
+  static syncUsers({ client, ship }, messages) {
+    const { organization, secret } = client.configuration();
     const config = buildConfigFromShip(ship, organization, secret);
     const agent = new Agent(config);
-    const matchingUsers = applyFilters ? agent.getUsersMatchingSegments(users) : users;
+    const matchingUsers = getUsersMatchingSegments(messages, config.sync.userSegmentIds);
     let result = Promise.resolve({});
     if (matchingUsers.length > 0) {
       result = agent.connect().then(() => {
         return agent.syncUsers(matchingUsers.map(u => u.user));
       });
     }
-
     return result;
   }
 
-  static syncAccounts(hull, ship, accounts, options = {}) {
-    const { applyFilters = true } = options;
-    const { organization, secret } = hull.configuration();
+  static syncAccounts({ client, ship }, messages) {
+    const { organization, secret } = client.configuration();
     const config = buildConfigFromShip(ship, organization, secret);
     const agent = new Agent(config);
-    const matchingAccounts = applyFilters ? agent.getAccountsMatchingSegments(accounts) : accounts;
+    const matchingAccounts = getUsersMatchingSegments(messages, config.sync.accountSegmentIds);
     let result = Promise.resolve({});
     if (matchingAccounts.length > 0) {
       result = agent.connect().then(() => {
         return agent.syncAccounts(matchingAccounts.map(a => a.account));
       });
     }
-
     return result;
   }
 
@@ -187,24 +190,6 @@ export default class Agent extends EventEmitter {
     return this._connect;
   }
 
-  getSubjectsMatchingSegmentsIds(subjects, segmentIds) {
-    return subjects.filter(subject => {
-      const ids = (subject.segments || []).map(s => s.id);
-      return _.intersection(ids, segmentIds).length > 0;
-    });
-  }
-
-  getUsersMatchingSegments(users) {
-    const { segmentIds } = this.config.sync || {};
-    return this.getSubjectsMatchingSegmentsIds(users, segmentIds);
-  }
-
-  getAccountsMatchingSegments(accounts) {
-    // TODO: Define config format for accout segments
-    const { segmentIds } = this.config.sync_accounts || {};
-    return this.getSubjectsMatchingSegmentsIds(accounts, segmentIds);
-  }
-
   getFieldsSchema() {
     const { mappings } = this.config;
     return Promise.all(_.map(mappings, ({ type }) => {
@@ -297,7 +282,7 @@ export default class Agent extends EventEmitter {
     const emails = users.map(u => u.email);
     const sfRecords = this.sf.searchEmails(emails, mappings);
     return sfRecords.then((searchResults) => {
-      const recordsByType = syncRecords(searchResults, users, { mappings });
+      const recordsByType = syncUsers(searchResults, users, { mappings });
       const upsertResults = ["Lead", "Contact"].map((recordType) => {
         const records = recordsByType[recordType];
         if (records && records.length > 0) {
@@ -320,23 +305,23 @@ export default class Agent extends EventEmitter {
 
   syncAccounts(accounts) {
     const mappings = this.config.mappings;
-    const ids = accounts.map(a => a.id);
-    const sfRecords = this.sf.searchIds(ids, mappings);
+    const domains = accounts.map(a => a.domain);
+    const sfRecords = this.sf.searchDomains(domains, mappings);
     return sfRecords.then((searchResults) => {
-      const recordsByType = syncRecords(searchResults, accounts, { mappings });
-      const upsertResults = ["Account"].map((recordType) => {
-        const records = recordsByType[recordType];
-        if (records && records.length > 0) {
-          return this.sf.upsert(recordType, records, "Id").then((results) => {
-            _.map(records, record => this.hull.logger.info("outgoing.account", record));
-            return { recordType, results, records };
-          });
-        }
-      });
+      const records = syncAccounts(searchResults, accounts, mappings.Account);
+      let upsertResults = [];
+
+      if (records && records.length > 0) {
+        upsertResults = this.sf.upsert("Account", records, "Id").then((results) => {
+          _.map(records, record => this.hull.logger.info("outgoing.account", record));
+          return { results, records };
+        });
+      }
+
       return Promise.all(upsertResults).then((results) => {
         return results.reduce((rr, r) => {
-          if (r && r.recordType) {
-            rr[r.recordType] = r;
+          if (r) {
+            rr.Account = r;
           }
           return rr;
         }, {});

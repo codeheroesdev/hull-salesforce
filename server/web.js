@@ -7,10 +7,16 @@ if (process.env.NEW_RELIC_LICENSE_KEY) {
   require("newrelic");
 }
 
-const config = require("./config").config(process.env);
-
-config.Hull = Hull;
-config.port = process.env.PORT || 8082;
+const config = {
+  hostSecret: process.env.SECRET || "BOOM",
+  port: process.env.PORT || 8082,
+  salesforce: {
+    oauth2: {
+      clientId: process.env.CLIENT_ID,
+      clientSecret: process.env.CLIENT_SECRET
+    }
+  },
+};
 
 const app = express();
 server(app, config);

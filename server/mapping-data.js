@@ -76,8 +76,9 @@ const DEFAULT_MAPPING = {
     { service_attribute: "AnnualRevenue", hull_top_level_trait: null, hull_trait: "annual_revenue", type: "string" },
     { service_attribute: "NumberOfEmployees", hull_top_level_trait: null, hull_trait: "number_of_employees", type: "int" },
     { service_attribute: "Industry", hull_top_level_trait: null, hull_trait: "industry", type: "string" },
+    { service_attribute: "Name", hull_top_level_trait: "name", hull_trait: "name", type: "string" },
     { service_attribute: "Phone", hull_top_level_trait: null, hull_trait: "phone", type: "string" },
-    { service_attribute: "Website", hull_top_level_trait: "domain", hull_trait: "website", type: "string" },
+    { service_attribute: "Website", hull_top_level_trait: "domain", hull_trait: "website", type: "string" }
   ]
 };
 
