@@ -176,7 +176,7 @@
     {
       "name": "fetch_accounts",
       "title": "Fetch Accounts",
-      "description": "Fetch Salesforce Accounts to Hull",
+      "description": "Enable fetching Salesforce Accounts to Hull",
       "type": "boolean",
       "default": false
     },
@@ -186,7 +186,8 @@
       "type" : "array",
       "format" : "table",
       "default" : [
-        { "hull_field_name" : "domain", "salesforce_field_name" : "Website", "default_value" : "[Unknown]", "overwrite" : false }
+        { "hull_field_name" : "domain", "salesforce_field_name" : "Website", "default_value" : "[Unknown]", "overwrite" : false },
+        { "hull_field_name" : "name", "salesforce_field_name" : "Name", "default_value" : "[Unknown]", "overwrite" : false }
       ],
       "items" : {
         "type" : "object",
@@ -201,7 +202,7 @@
             "title" : "Salesforce Field",
             "format" : "select",
             "options" : {
-              "loadOptions": "/schema/contact_updateable"
+              "loadOptions": "/schema/account_updateable"
             }
           },
           "overwrite" : {
@@ -215,6 +216,17 @@
           "salesforce_field_name"
         ]
       }
+    },
+    {
+      "name": "synchronized_account_segments",
+      "title": "Filter accounts",
+      "description": "Global filter. Only send if account matches one of these segments.",
+      "type": "array",
+      "format": "segment",
+      "items": {
+        "type": "string"
+      },
+      "default": []
     },
     {
       "name" : "fetch_account_fields",

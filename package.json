@@ -61,7 +61,7 @@
     "ejs": "^2.5.6",
     "express": "^4.15.2",
     "hogan.js": "^3.0.2",
-    "hull": "^0.11.0-beta.3",
+    "hull": "^0.11.0",
     "jsforce": "^1.7.1",
     "librato-node": "^4.1.0",
     "lodash": "^4.16.6",

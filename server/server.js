@@ -3,24 +3,12 @@ import cors from "cors";
 import librato from "librato-node";
 import { notifHandler, batchHandler, oAuthHandler } from "hull/lib/utils";
 import { Strategy } from "passport-forcedotcom";
-
-import BatchSyncHandler from "./batch-sync";
 import Agent from "./agent";
-
-
-function save(hull, ship, settings) {
-  return hull.put(ship.id, {
-    private_settings: {
-      ...ship.private_settings,
-      ...settings
-    }
-  });
-}
-
+import Hull from "hull";
 
 module.exports = function Server(app, options = {}) {
-  const { Hull, hostSecret, port, onMetric, clientConfig = {} } = options;
-  const connector = new Hull.Connector({ hostSecret, port, clientConfig });
+  const { hostSecret, port } = options;
+  const connector = new Hull.Connector({ hostSecret, port });
 
   connector.setupApp(app);
 
@@ -87,6 +75,7 @@ module.exports = function Server(app, options = {}) {
   });
 
   app.post("/notify", notifHandler({
+    // TODO: add an accountHandlerOptions here ?
     userHandlerOptions: {
       groupTraits: false,
       maxSize: 1,
@@ -100,9 +89,9 @@ module.exports = function Server(app, options = {}) {
       Hull.logger.warn("Error", status, message);
     },
     handlers: {
-      "user:update": ({ message }, { ship, hull }) => {
+      "user:update": ({ client, ship }, messages) => {
         try {
-          BatchSyncHandler.handleUserUpdate(message, { ship, hull });
+          Agent.syncUsers({ client, ship }, messages);
           if (process.env.LIBRATO_TOKEN && process.env.LIBRATO_USER) {
             librato.increment("user_report:update", 1, { source: ship.id });
           }
@@ -112,11 +101,11 @@ module.exports = function Server(app, options = {}) {
           return err;
         }
       },
-      /*
-      "account:update": ({ message }, { ship, hull }) => {
-        console.log("account update:", message);
+      // account:update messages are not batched and are received one by one
+      "account:update": ({ ship, client }, message) => {
+        const messages = [message];
         try {
-          BatchSyncHandler.handle(message, { ship, hull });
+          Agent.syncAccounts({ client, ship }, messages);
           if (process.env.LIBRATO_TOKEN && process.env.LIBRATO_USER) {
             librato.increment("account_report:update", 1, { source: ship.id });
           }
@@ -126,7 +115,6 @@ module.exports = function Server(app, options = {}) {
           return err;
         }
       }
-      */
     }
   }));
 

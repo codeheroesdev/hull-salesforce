@@ -7,7 +7,7 @@ function increment(metric, value, options) {
     if (librato && librato.increment) {
       librato.increment(metric, value, options);
     }
-  } catch(err) {
+  } catch (err) {
     // console.warn('Librato error', err)
   }
 }
@@ -18,7 +18,7 @@ function escapeSOSL(str) {
   return str.replace(RESERVED_CHARACTERS_REGEXP, c => `\\${c}`);
 }
 
-function searchFieldsQuery(field, emails, mappings) {
+function searchQuery(field, emails, mappings) {
   const findEmails = emails.reduce((a, e) => {
     e && e.length > 3 && a.push(`"${escapeSOSL(e)}"`);
     return a;
@@ -32,6 +32,18 @@ function searchFieldsQuery(field, emails, mappings) {
   const qry = `FIND {${findEmails.join(" OR ")}} IN ${field} FIELDS RETURNING ${Returning.join(", ")}`;
 
   return qry;
+}
+
+function getMatchingPattern(s, patterns) {
+  let result = null;
+  patterns.some((pattern) => {
+    if (s.match(pattern)) {
+      result = pattern;
+      return true;
+    }
+    return false;
+  });
+  return result;
 }
 
 export default class SF {
@@ -250,9 +262,6 @@ export default class SF {
     });
   }
 
-  searchEmailsQuery = (emails, mappings) => searchFieldsQuery("Email", emails, mappings)
-  searchIdsQuery = (ids, mappings) => searchFieldsQuery("Id", ids, mappings)
-
   exec(fn) {
     const args = [].slice.call(arguments, 1);
     return new Promise((resolve, reject) => {
@@ -262,38 +271,42 @@ export default class SF {
     });
   }
 
-  searchEmails(emails = [], mappings) {
+  searchEmails(emails, mappings) {
     if (emails.length === 0) return Promise.resolve({});
 
     const chunks = _.chunk(emails, 100);
     const searches = chunks.map(
-      chunk => this.exec("search", this.searchEmailsQuery(chunk, mappings))
+      chunk => this.exec("search", searchQuery("EMAIL", chunk, mappings))
     );
 
     return Promise.all(searches).then((results) => {
       return results.reduce((recs, { searchRecords = [] }) => {
-        searchRecords.map((o) => {
-          recs[o.Email] = recs[o.Email] || {};
-          recs[o.Email][o.attributes.type] = o;
+        searchRecords.forEach((record) => {
+          recs[record.Email] = recs[record.Email] || {};
+          recs[record.Email][record.attributes.type] = record;
         });
         return recs;
       }, {});
     });
   }
 
-  searchIds(ids = [], mappings) {
-    if (ids.length === 0) return Promise.resolve({});
+  searchDomains(domains = [], mappings) {
+    if (domains.length === 0) return Promise.resolve({});
 
-    const chunks = _.chunk(ids, 100);
+    const chunks = _.chunk(domains, 100);
     const searches = chunks.map(
-      chunk => this.exec("search", this.searchIdsQuery(chunk, mappings))
+      chunk => this.exec("search", searchQuery("NAME", chunk, mappings))
     );
 
     return Promise.all(searches).then((results) => {
       return results.reduce((recs, { searchRecords = [] }) => {
-        searchRecords.map((o) => {
-          recs[o.Id] = recs[o.Id] || {};
-          recs[o.Id][o.attributes.type] = o;
+        searchRecords.forEach((record) => {
+          // TODO: Add resolution strategy in case several sf records match the domain
+          const domain = getMatchingPattern(record.Website, domains);
+          if (domain) {
+            recs[domain] = recs[domain] || {};
+            recs[domain][record.attributes.type] = record;
+          }
         });
         return recs;
       }, {});

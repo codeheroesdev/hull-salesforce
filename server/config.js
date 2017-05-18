@@ -1,72 +1,7 @@
 import _ from "lodash";
-import { resolve } from "path";
-import { readFileSync } from "fs";
 import { createHmac } from "crypto";
 import Hull from "hull";
 import { getTypes, getServiceAttributeToHullTopLevel, getServiceAttributeToHullTrait } from "./mapping-data";
-
-/**
- * Deprecated
- */
-export function config(env = {}, options = {}) {
-  const defaults = {
-    hostSecret: env.SECRET || "BOOM",
-    hull: {
-      id: env.HULL_APP_ID,
-      organization: env.HULL_ORG_URL,
-      secret: env.HULL_APP_SECRET
-    },
-    salesforce: {
-      oauth2: {
-        clientId: process.env.CLIENT_ID,
-        clientSecret: process.env.CLIENT_SECRET
-      }
-    },
-    sync: {
-      fetchRange: "1h",
-      batchSize: 100
-    },
-    mappings: {
-      Lead: {
-        type: "Lead",
-        fields: {
-          LeadSource: "main_identity",
-          Description: "description",
-          Email: "email",
-          FirstName: { key: "first_name", defaultValue: "[Unknown]" },
-          LastName: { key: "last_name", defaultValue: "[Unknown]" },
-          Company: { key: "company", defaultValue: "[Unknown]" },
-          Street: { key: "address_street" },
-          City: { key: "address_city" },
-          Country: { key: "address_country" },
-          State: { key: "address_state" },
-          PostalCode: { key: "address_postal_code" },
-          Phone: { key: "phone" }
-        }
-      },
-      Contact: {
-        type: "Contact",
-        fields: {
-          Email: "email",
-          FirstName: "first_name",
-          LastName: "last_name"
-        }
-      }
-    }
-  };
-
-  let cfg = {};
-  const filename = options.f || env.CONFIG_FILE;
-
-  if (filename) {
-    cfg = JSON.parse(readFileSync(resolve(filename)));
-  }
-
-  return {
-    ...defaults,
-    ...cfg
-  };
-}
 
 function generateShipSecret(shipId, secret) {
   return createHmac("sha256", secret)
@@ -93,7 +28,6 @@ function getFieldsMapping(ship, type) {
 
   const fetchFields = _.merge(defaultServiceAttributesToHullTrait, settingsServiceAttributesToHullTrait);
 
-
   const fields = {};
   if (fieldsList && fieldsList.length > 0) {
     fieldsList.forEach((field) => {
@@ -118,7 +52,8 @@ export function buildConfigFromShip(ship, organization, secret) {
     access_token,
     refresh_token,
     instance_url,
-    synchronized_segments,
+    synchronized_user_segments,
+    synchronized_account_segments,
     fetch_accounts,
     salesforce_login,
     salesforce_password,
@@ -156,7 +91,8 @@ export function buildConfigFromShip(ship, organization, secret) {
     settings: { fetch_accounts },
     salesforce: { ...credentials, oauth2 },
     sync: {
-      segmentIds: synchronized_segments || [],
+      userSegmentIds: synchronized_user_segments || [],
+      accountSegmentIds: synchronized_account_segments || [],
       fetchRange: "3d",
       batchSize: 200
     },
