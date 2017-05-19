@@ -77,11 +77,11 @@ export default class Agent extends EventEmitter {
     }
 
     return agent.connect().then(() => {
-      const last_sync_at = new Date().getTime();
+      const sync_at = new Date().getTime();
       return agent.fetchChanges(options).then(() => {
         hull.get(ship.id).then(({ settings }) => {
           hull.put(ship.id, { settings: {
-            ...settings, last_sync_at
+            ...settings, last_sync_at: sync_at
           } });
         });
       });
@@ -117,11 +117,10 @@ export default class Agent extends EventEmitter {
       return this.connectWithToken();
     } else if (salesforce.login && salesforce.password) {
       return this.connectWithPassword();
-    } else {
-      const err = new Error("Missing credentials");
-      err.status = 403;
-      return Promise.reject(err);
     }
+    const err = new Error("Missing credentials");
+    err.status = 403;
+    return Promise.reject(err);
   }
 
   connectWithPassword() {
@@ -132,12 +131,13 @@ export default class Agent extends EventEmitter {
       Hull.logger.warn("Sync Error ", err);
     });
 
+    const { login, password, loginUrl } = this.config.salesforce;
+
     const connect = new Promise((resolve, reject) => {
       // Hull
       this.hull = new Hull(this.config.hull);
 
       // Salesforce
-      const { login, password, loginUrl } = this.config.salesforce;
       const conn = new Connection({ loginUrl });
       conn.setShipId(this.config.hull.id);
       if (login && password) {
@@ -176,7 +176,7 @@ export default class Agent extends EventEmitter {
     this.sf = new SF(conn, this.hull.logger);
     this._connect = Promise.resolve(conn);
 
-    conn.on("refresh", (access_token, res) => {
+    conn.on("refresh", (access_token) => {
       this.hull.get(shipId).then(({ private_settings }) => {
         this.hull.put(shipId, {
           private_settings: {

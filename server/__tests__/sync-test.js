@@ -1,3 +1,4 @@
+/* eslint-disable */
 jest.dontMock("../sync");
 jest.dontMock("hogan.js");
 
