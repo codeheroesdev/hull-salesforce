@@ -1,7 +1,9 @@
 import Hogan from "hogan.js";
 import _ from "lodash";
 
-function getUpdatedFields(user, sfObject, mapping, emptyUser) {
+// NOTE: exported for tests only
+export function getUpdatedFields(user, sfObject, mapping, initialRecord) {
+  const initialSize = Object.keys(initialRecord).length;
   const fields = mapping.fields;
   const fieldNames = Object.keys(fields);
   const record = fieldNames.reduce((mapped, f) => {
@@ -13,7 +15,7 @@ function getUpdatedFields(user, sfObject, mapping, emptyUser) {
     // Apply defaultValue only if orig is undefined
     const defaultValue = orig ? undefined : (def && def.defaultValue);
 
-    if (true || orig === undefined || orig === null || orig === (def && def.defaultValue) || def.overwrite === true) {
+    if (orig === undefined || orig === null || orig === (def && def.defaultValue) || def.overwrite === true) {
       if (typeof (def) === "string") {
         const key = _.last(_.split(def, "."));
         val = user[key];
@@ -41,9 +43,9 @@ function getUpdatedFields(user, sfObject, mapping, emptyUser) {
     }
 
     return mapped;
-  }, emptyUser);
+  }, initialRecord);
 
-  if (Object.keys(record).length > 1) {
+  if (Object.keys(record).length > initialSize) {
     return record;
   }
   return undefined;

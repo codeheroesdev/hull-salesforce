@@ -18,7 +18,7 @@ function escapeSOSL(str) {
   return str.replace(RESERVED_CHARACTERS_REGEXP, c => `\\${c}`);
 }
 
-function searchQuery(field, emails, mappings) {
+export function searchQuery(field, emails, mappings) {
   const findEmails = emails.reduce((a, e) => {
     e && e.length > 3 && a.push(`"${escapeSOSL(e)}"`);
     return a;
@@ -34,7 +34,7 @@ function searchQuery(field, emails, mappings) {
   return qry;
 }
 
-function getMatchingPattern(s, patterns) {
+export function getMatchingPattern(s, patterns) {
   let result = null;
   patterns.some((pattern) => {
     if (s.match(pattern)) {
