@@ -36,7 +36,7 @@ export default class Connection extends jsforce.Connection {
   request(request, options, callback) {
     increment("salesforce:requests", 1, { source: this._shipId });
     const ret = super.request(request, options, callback);
-    ret.then((res) => {
+    ret.then(() => {
       if (this.limitInfo && this.limitInfo.apiUsage) {
         measure("salesforce:used", this.limitInfo.apiUsage.used, { source: this._shipId });
       }

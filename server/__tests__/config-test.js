@@ -1,3 +1,4 @@
+/* eslint-disable */
 import _ from "lodash";
 
 jest.dontMock("lodash");

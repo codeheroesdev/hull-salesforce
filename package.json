@@ -69,7 +69,8 @@
     "nf": "^0.0.3",
     "node-babel": "^0.1.2",
     "passport-forcedotcom": "^0.1.4",
-    "rimraf": "^2.5.4"
+    "rimraf": "^2.5.4",
+    "winston-logstash": "^0.3.0"
   },
   "devDependencies": {
     "babel-eslint": "^7.1.1",

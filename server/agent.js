@@ -119,11 +119,10 @@ export default class Agent extends EventEmitter {
       return this.connectWithToken();
     } else if (salesforce.login && salesforce.password) {
       return this.connectWithPassword();
-    } else {
-      const err = new Error("Missing credentials");
-      err.status = 403;
-      return Promise.reject(err);
     }
+    const err = new Error("Missing credentials");
+    err.status = 403;
+    return Promise.reject(err);
   }
 
   connectWithPassword() {
@@ -134,9 +133,10 @@ export default class Agent extends EventEmitter {
       this.hull.logger.warn("sync.error ", err);
     });
 
+    const { login, password, loginUrl } = this.config.salesforce;
+
     const connect = new Promise((resolve, reject) => {
       // Salesforce
-      const { login, password, loginUrl } = this.config.salesforce;
       const conn = new Connection({ loginUrl });
       conn.setShipId(this.config.hull.id);
       if (login && password) {
@@ -175,7 +175,7 @@ export default class Agent extends EventEmitter {
     this.sf = new SF(conn, this.hull.logger);
     this._connect = Promise.resolve(conn);
 
-    conn.on("refresh", (access_token, res) => {
+    conn.on("refresh", (access_token) => {
       this.hull.get(shipId).then(({ private_settings }) => {
         this.hull.put(shipId, {
           private_settings: {
@@ -281,7 +281,7 @@ export default class Agent extends EventEmitter {
               promises.push(this.hull
                 .asUser({ email: record.Email })
                 .traits(traits)
-                .then(() => this.hull.logger.info("incoming.user.success", { email: rec.Email, traits })));
+                .then(() => this.hull.logger.info("incoming.user.success", { email: record.Email, traits })));
             }
           }
         });
@@ -292,7 +292,7 @@ export default class Agent extends EventEmitter {
 
   syncUsers(users) {
     const mappings = this.config.mappings;
-    let emails = users.filter(u => u.email).map(u => u.email);
+    const emails = users.filter(u => u.email).map(u => u.email);
     const sfRecords = this.sf.searchEmails(emails, mappings);
     return sfRecords.then((searchResults) => {
       const recordsByType = syncUsers(searchResults, users, { mappings });

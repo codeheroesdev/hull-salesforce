@@ -1,3 +1,4 @@
+/* eslint-disable */
 jest.dontMock("../sf");
 jest.dontMock("lodash");
 jest.dontMock("jsforce");

@@ -1,10 +1,11 @@
 import _ from "lodash";
 import cors from "cors";
 import librato from "librato-node";
+import Hull from "hull";
 import { notifHandler, batchHandler, oAuthHandler } from "hull/lib/utils";
 import { Strategy } from "passport-forcedotcom";
+
 import Agent from "./agent";
-import Hull from "hull";
 
 module.exports = function Server(app, options = {}) {
   const { hostSecret, port } = options;
@@ -22,7 +23,7 @@ module.exports = function Server(app, options = {}) {
       scope: ["refresh_token", "api"] // App Scope
     },
     isSetup(req) {
-      if (!!req.query.reset) return Promise.reject();
+      if (req.query.reset) return Promise.reject();
       const { access_token, refresh_token, instance_url } = req.hull.ship.private_settings || {};
 
       if (access_token && refresh_token && instance_url) return Promise.resolve(req.hull.ship);
@@ -135,10 +136,10 @@ module.exports = function Server(app, options = {}) {
     const { type } = req.params || {};
     const { client: hull, ship } = req.hull;
     return Agent.getFieldsSchema(hull, ship).then((definitions = {}) => {
-      const options = (definitions[type] || []).map((t) => {
+      const schema = (definitions[type] || []).map((t) => {
         return { value: t, label: t };
       });
-      return res.json({ options });
+      return res.json({ options: schema });
     }).catch((err) => {
       res.json({ ok: false, error: err.message, options: [] });
     });

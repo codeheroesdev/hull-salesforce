@@ -12,6 +12,7 @@ function increment(metric, value, options) {
   }
 }
 
+// eslint-disable-next-line no-useless-escape
 const RESERVED_CHARACTERS_REGEXP = /\?|\&|\||\!|\{|\}|\[|\]|\(|\)|\^|\~|\*|\:|\+|\-|\"|\'/ig;
 
 function escapeSOSL(str) {
@@ -20,7 +21,9 @@ function escapeSOSL(str) {
 
 export function searchQuery(field, emails, mappings) {
   const findEmails = emails.reduce((a, e) => {
-    e && e.length > 3 && a.push(`"${escapeSOSL(e)}"`);
+    if (e && e.length > 3) {
+      a.push(`"${escapeSOSL(e)}"`);
+    }
     return a;
   }, []);
 
@@ -44,6 +47,20 @@ export function getMatchingPattern(s, patterns) {
     return false;
   });
   return result;
+}
+
+function getDefaultFields(type) {
+  if (type === "Account") {
+    return ["Id", "Website"];
+  }
+  return ["Id", "Email", "FirstName", "LastName"];
+}
+
+function getRequiredField(type) {
+  if (type === "Account") {
+    return "Id";
+  }
+  return "Email";
 }
 
 export default class SF {
@@ -86,7 +103,7 @@ export default class SF {
           reject(err);
         } else {
           if (_.isArray(res)) {
-            res.map((r, idx) => {
+            res.forEach((r, idx) => {
               increment("salesforce:errors", 1, { source: this.connection._shipId });
               if (r.success !== "true") {
                 this.logger.error("outgoing.user.error", {
@@ -136,7 +153,7 @@ export default class SF {
           reject(err);
         } else {
           if (_.isArray(res)) {
-            res.map((r, idx) => {
+            res.forEach((r, idx) => {
               increment("salesforce:errors", 1, { source: this.connection._shipId });
               if (r.success.toString() !== "true") {
                 this.logger.error("outgoing.user.error", {
@@ -179,27 +196,13 @@ export default class SF {
     });
   }
 
-  getDefaultFields(type) {
-    if (type === "Account") {
-      return ["Id", "Website"];
-    }
-    return ["Id", "Email", "FirstName", "LastName"];
-  }
-
-  getRequiredField(type) {
-    if (type === "Account") {
-      return "Id";
-    }
-    return "Email";
-  }
-
   /**
   * Fetch all records of a given type by ID
   *
   */
   getRecordsByIds(type, ids, options = {}) {
-    const defaultFields = this.getDefaultFields(type);
-    const requiredField = this.getRequiredField(type);
+    const defaultFields = getDefaultFields(type);
+    const requiredField = getRequiredField(type);
     const fieldsList = (options && options.fields && options.fields.length > 0) ? Promise.resolve(options.fields) : this.getFieldsList(type).then(_.keys);
     return fieldsList.then((fields) => {
       const selectFields = _.uniq(fields.concat(defaultFields)).join(",");
@@ -211,8 +214,8 @@ export default class SF {
 
   getAllRecords({ type, fields = [] }, onRecord) {
     // Default fields for Leads and Contacts
-    const defaultFields = this.getDefaultFields(type);
-    const requiredField = this.getRequiredField(type);
+    const defaultFields = getDefaultFields(type);
+    const requiredField = getRequiredField(type);
     const selectFields = _.uniq(fields.concat(defaultFields)).join(",");
     return new Promise((resolve, reject) => {
       const soql = `SELECT ${selectFields} FROM ${type} WHERE ${requiredField} != null`;
@@ -266,7 +269,11 @@ export default class SF {
     const args = [].slice.call(arguments, 1);
     return new Promise((resolve, reject) => {
       this.connection[fn].apply(this.connection, [...args, (err, res) => {
-        err ? reject(err) : resolve(res);
+        if (err) {
+          reject(err);
+        } else {
+          resolve(res);
+        }
       }]);
     });
   }
