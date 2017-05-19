@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.4.1
+- [feature] export hull accounts to salesforce matching domain to Website
+
 ## v0.4.0
 - [feature] import salesforce accounts into hull
 
