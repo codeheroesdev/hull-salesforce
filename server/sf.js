@@ -50,17 +50,33 @@ export function getMatchingPattern(s, patterns) {
 }
 
 function getDefaultFields(type) {
-  if (type === "Account") {
-    return ["Id", "Website"];
+  switch (type) {
+    case "Account":
+      return ["Id", "Website"];
+    case "Contact":
+      return ["Id", "Email", "FirstName", "LastName", "Account.Website"];
+    case "Lead":
+      return ["Id", "Email", "FirstName", "LastName"];
+    default:
+      return ["Id"];
   }
-  return ["Id", "Email", "FirstName", "LastName"];
 }
 
 function getRequiredField(type) {
-  if (type === "Account") {
-    return "Id";
+  switch (type) {
+    case "Account":
+      return "Website";
+    default:
+      return "Email";
   }
-  return "Email";
+}
+
+function getSoqlQuery(type, fields) {
+  const defaultFields = getDefaultFields(type);
+  const requiredField = getRequiredField(type);
+  const selectFields = _.uniq(fields.concat(defaultFields)).join(",");
+
+  return `SELECT ${selectFields} FROM ${type} WHERE ${requiredField} != null`;
 }
 
 export default class SF {
@@ -213,12 +229,8 @@ export default class SF {
   }
 
   getAllRecords({ type, fields = [] }, onRecord) {
-    // Default fields for Leads and Contacts
-    const defaultFields = getDefaultFields(type);
-    const requiredField = getRequiredField(type);
-    const selectFields = _.uniq(fields.concat(defaultFields)).join(",");
     return new Promise((resolve, reject) => {
-      const soql = `SELECT ${selectFields} FROM ${type} WHERE ${requiredField} != null`;
+      const soql = getSoqlQuery(type, fields);
       const query = this.connection.query(soql)
         .on("record", onRecord)
         .on("end", () => {
