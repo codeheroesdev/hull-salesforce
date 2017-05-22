@@ -247,11 +247,12 @@ export default class SF {
     return Promise.all(searches).then((results) => {
       return results.reduce((recs, { searchRecords = [] }) => {
         searchRecords.forEach((record) => {
-          // TODO: Add resolution strategy in case several sf records match the domain
-          const domain = getMatchingPattern(record.Website, domains);
-          if (domain) {
-            recs[domain] = recs[domain] || {};
-            recs[domain][record.attributes.type] = record;
+          if (record.attributes.type === "Account") {
+            // TODO: Add resolution strategy in case several sf records match the domain
+            const domain = getMatchingPattern(record.Website, domains);
+            if (domain) {
+              recs[domain] = record;
+            }
           }
         });
         return recs;
