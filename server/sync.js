@@ -78,14 +78,11 @@ export function syncAccounts(sfAccounts, accounts, mapping) {
     const sfAccount = sfAccounts[account.domain] || sfAccounts[account["salesforce/id"]] || {};
 
     const accountToUpsert = {};
-    if (_.size(sfAccount)) {
+    if (sfAccount.Id) {
       accountToUpsert.Id = sfAccount.Id;
-      accountToUpsert.Website = sfAccount.Website;
-    } else {
-      accountToUpsert.Website = account.domain;
     }
 
-    const record = getUpdatedFields(_.omit(account, "domain"), sfAccount, mapping, accountToUpsert);
+    const record = getUpdatedFields(account, sfAccount, mapping, accountToUpsert);
 
     if (record) {
       records.push(record);
