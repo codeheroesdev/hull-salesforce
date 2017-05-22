@@ -1,6 +1,6 @@
 {
   "name": "hull-salesforce",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Hull Salesforce integration",
   "main": "index.js",
   "scripts": {

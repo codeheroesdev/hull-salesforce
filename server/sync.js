@@ -70,9 +70,12 @@ export function syncUsers(sfObjectsByEmail, users, options) {
   }, { Contact: [], Lead: [] });
 }
 
-export function syncAccounts(sfAccountsByDomain, accounts, mapping) {
+/*
+ * :param sfAccounts: object - Salesforce Account records by domain or id
+ */
+export function syncAccounts(sfAccounts, accounts, mapping) {
   return accounts.reduce((records, account) => {
-    const sfAccount = _.get(sfAccountsByDomain[account.domain] || {}, "Account", {});
+    const sfAccount = sfAccounts[account.domain] || sfAccounts[account["salesforce/id"]] || {};
 
     const accountToUpsert = {};
     if (_.size(sfAccount)) {

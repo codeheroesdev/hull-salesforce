@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.4.2
+- [feature] use account salesforce id to sync when it is available in hull
+
 ## v0.4.1
 - [feature] export hull accounts to salesforce matching domain to Website
 

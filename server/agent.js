@@ -46,7 +46,7 @@ export default class Agent extends EventEmitter {
     const { organization, secret } = client.configuration();
     const config = buildConfigFromShip(ship, organization, secret);
     const agent = new Agent(config);
-    const matchingAccounts = getUsersMatchingSegments(messages, config.sync.accountSegmentIds);
+    const matchingAccounts = messages; // getUsersMatchingSegments(messages, config.sync.accountSegmentIds);
     let result = Promise.resolve({});
     if (matchingAccounts.length > 0) {
       result = agent.connect().then(() => {
@@ -318,9 +318,29 @@ export default class Agent extends EventEmitter {
 
   syncAccounts(accounts) {
     const mappings = this.config.mappings;
-    const domains = accounts.map(a => a.domain);
-    const sfRecords = this.sf.searchDomains(domains, mappings);
-    return sfRecords.then((searchResults) => {
+    const { ids, domains } = accounts.reduce((identifiers, account) => {
+      if (account["salesforce/id"]) {
+        identifiers.ids.push(account["salesforce/id"]);
+      } else if (account.domain) {
+        identifiers.domains.push(account.domain);
+      }
+      return identifiers;
+    }, { ids: [], domains: [] });
+
+    const sfAccountsByDomains = this.sf.searchDomains(domains, mappings);
+    const sfAccountsByIds = this.sf.getRecordsByIds("Account", ids, { fields: Object.keys(mappings.Account.fields) })
+      .then((records) => {
+        // Build an account lookup object by ids
+        return records.reduce((accu, record) => {
+          accu[record.Id] = record;
+          return accu;
+        }, {});
+      });
+
+    return Promise.all([sfAccountsByDomains, sfAccountsByIds]).then((sfRecords) => {
+      // Merge accounts found by ids and by domains
+      const searchResults = Object.assign(sfRecords[0], sfRecords[1]);
+
       const records = syncAccounts(searchResults, accounts, mappings.Account);
       let upsertResults = [];
 

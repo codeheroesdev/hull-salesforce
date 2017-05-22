@@ -148,10 +148,12 @@ describe("syncAccounts", () => {
   it("is fine...", () => {
     const NewAccount = { id: "44444", domain: "new.com", name: "New" };
     const NothingChanged = { id: "000", domain: "nothing.org", name: "Changed" };
+    const AlreadyMatched = { id: "111", name: "Hull", "salesforce/id": "abcd" };
 
     const SearchResults = {
-      "hull.io": { Account: sfAccount },
-      "nothing.org": { Account: { Id: "000", Website: "nothing.org", Name: "Changed" } }
+      "hull.io": sfAccount,
+      "nothing.org": { Id: "000", Website: "nothing.org", Name: "Changed" },
+      "abcd": { Id: "abcd", Website: "hull.io" }
     };
 
     const records = syncAccounts(
@@ -159,7 +161,8 @@ describe("syncAccounts", () => {
       [
         account,
         NewAccount,
-        NothingChanged
+        NothingChanged,
+        AlreadyMatched
       ],
       Mappings.Account
     );
@@ -173,6 +176,11 @@ describe("syncAccounts", () => {
       {
         Website: "new.com",
         Name: "New"
+      },
+      {
+        Id: "abcd",
+        Website: "hull.io",
+        Name: "Hull"
       }
     ]);
   });
