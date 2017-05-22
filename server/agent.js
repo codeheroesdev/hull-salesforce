@@ -214,34 +214,51 @@ export default class Agent extends EventEmitter {
 
     // Adds salesforce attribute
     _.map(mappings.fetchFields, (hullGroupField, salesforceField) => {
-      if (_.has(record, salesforceField)) {
+      if (!_.isNil(record[salesforceField])) {
         _.set(traits, traitName(source, hullGroupField, salesforceField), record[salesforceField]);
       }
     });
 
     // Adds hull top level property if the salesforce attribute can be mapped
     _.map(mappings.fetchFieldsToTopLevel, (hullTopLevelField, salesforceField) => {
-      if (!_.isNil(hullTopLevelField) && _.has(record, salesforceField)) {
+      if (!_.isNil(record[salesforceField]) && !_.isNil(hullTopLevelField)) {
         _.set(traits, hullTopLevelField, { value: record[salesforceField], operation: "setIfNull" });
       }
     });
     return traits;
   }
 
+  shouldFetch = (type, fields) => fields && fields.length > 0 && (type !== "Account" || this.config.settings.fetch_accounts);
+
   fetchAll() {
     const { mappings } = this.config;
     return Promise.all(_.map(mappings, ({ type, fetchFields }) => {
       const fields = _.keys(fetchFields);
-      if (fields && fields.length > 0) {
+      if (this.shouldFetch(type, fields)) {
         return this.sf.getAllRecords({ type, fields }, (record = {}) => {
           const traits = this.getRecordTraits(type, record);
           if (!_.isEmpty(traits)) {
-            if (type === "Account" && this.config.settings.fetch_accounts) {
-              this.hull.logger.info("incoming.account", { domain: record.Website, ...traits });
-              this.hull.asAccount({ domain: record.Website }).traits(traits);
-            } else if (type === "Lead" || type === "Contact") {
-              this.hull.logger.info("incoming.user", { email: record.Email, ...traits });
-              this.hull.asUser({ email: record.Email }).traits(traits);
+            switch (type) {
+              case "Account":
+                this.hull.logger.info("incoming.account", traits);
+                this.hull.asAccount({ domain: record.Website }).traits(traits);
+                break;
+              case "Contact":
+                this.hull.logger.info("incoming.user", { type, ...traits });
+                this.hull.asUser({ email: record.Email }).traits(traits);
+                // Link with this contact's account
+                if (record.Account && !_.isNil(record.Account.Website)) {
+                  this.hull.logger.debug("account.link", { email: record.Email, domain: record.Account.Website });
+                  this.hull.asUser({ email: record.Email }).account({ domain: record.Account.Website });
+                }
+                break;
+              case "Lead":
+                this.hull.logger.info("incoming.user", { type, ...traits });
+                this.hull.asUser({ email: record.Email }).traits(traits);
+                break;
+              default:
+                this.hull.logger.warn("unknown record type", { type });
+                break;
             }
           }
         });
@@ -259,8 +276,8 @@ export default class Agent extends EventEmitter {
       return { type, fields: fetchFields, records: [] };
     })).then((changes) => {
       const promises = [];
-      changes.map(({ type, records }) => {
-        records.map((record) => {
+      changes.forEach(({ type, records }) => {
+        records.forEach((record) => {
           const traits = this.getRecordTraits(type, record);
           if (!_.isEmpty(traits)) {
             if (type === "Account" && this.config.settings.fetch_accounts) {

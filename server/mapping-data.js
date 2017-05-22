@@ -69,10 +69,11 @@ const DEFAULT_MAPPING = {
     // { service_attribute: "MailingCountryCode", hull_top_level_trait: null, hull_trait: "mailing_country_code", type: "string" }, // No such column 'MailingCountryCode' on entity 'Contact'
     // { service_attribute: "Website", hull_top_level_trait: "website", hull_trait: "website", type: "string" }, // No such column 'Website' on entity 'Contact'
     { service_attribute: "Id", hull_top_level_trait: null, hull_trait: "id", type: "string" },
-    { service_attribute: "OwnerId", hull_top_level_trait: null, hull_trait: "owner_id", type: "string" }
+    { service_attribute: "OwnerId", hull_top_level_trait: null, hull_trait: "owner_id", type: "string" },
+    { service_attribute: "AccountId", hull_top_level_trait: null, hull_trait: "account_id", type: "string" },
   ],
   Account: [
-    { service_attribute: "Id", hull_top_level_trait: "external_id", hull_trait: "id", type: "string" },
+    { service_attribute: "Id", hull_top_level_trait: null, hull_trait: "id", type: "string" },
     { service_attribute: "AnnualRevenue", hull_top_level_trait: null, hull_trait: "annual_revenue", type: "string" },
     { service_attribute: "NumberOfEmployees", hull_top_level_trait: null, hull_trait: "number_of_employees", type: "int" },
     { service_attribute: "Industry", hull_top_level_trait: null, hull_trait: "industry", type: "string" },
