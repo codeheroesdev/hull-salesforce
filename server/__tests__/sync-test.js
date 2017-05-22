@@ -170,7 +170,6 @@ describe("syncAccounts", () => {
     expect(records).toEqual([
       {
         Id: "3412",
-        Website: "http://www.hull.io",
         Zero: 0
       },
       {
@@ -179,7 +178,6 @@ describe("syncAccounts", () => {
       },
       {
         Id: "abcd",
-        Website: "hull.io",
         Name: "Hull"
       }
     ]);
