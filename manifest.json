@@ -154,13 +154,6 @@
       "type": "string"
     },
     {
-      "name": "fetch_accounts",
-      "title": "Fetch Accounts",
-      "description": "Enable fetching Salesforce Accounts to Hull",
-      "type": "boolean",
-      "default": false
-    },
-    {
       "name" : "accounts_mapping",
       "title" : "List of Account fields to push to Salesforce",
       "type" : "array",
@@ -207,6 +200,13 @@
         "type": "string"
       },
       "default": []
+    },
+    {
+      "name": "fetch_accounts",
+      "title": "Fetch Accounts",
+      "description": "Enable fetching Salesforce Accounts to Hull",
+      "type": "boolean",
+      "default": false
     },
     {
       "name" : "fetch_account_fields",
