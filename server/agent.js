@@ -46,7 +46,7 @@ export default class Agent extends EventEmitter {
     const { organization, secret } = client.configuration();
     const config = buildConfigFromShip(ship, organization, secret);
     const agent = new Agent(config);
-    const matchingAccounts = messages; // getUsersMatchingSegments(messages, config.sync.accountSegmentIds);
+    const matchingAccounts = getUsersMatchingSegments(messages, config.sync.accountSegmentIds);
     let result = Promise.resolve({});
     if (matchingAccounts.length > 0) {
       result = agent.connect().then(() => {
