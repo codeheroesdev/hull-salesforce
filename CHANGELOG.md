@@ -1,2 +1,2 @@
-## v0.1.0
+## v0.2.2
 - allow overwriting oauth endpoint for accessing sandbox accounts
