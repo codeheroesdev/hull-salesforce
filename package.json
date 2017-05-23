@@ -1,6 +1,6 @@
 {
   "name": "hull-salesforce",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Hull Salesforce integration",
   "main": "index.js",
   "scripts": {
@@ -59,6 +59,7 @@
     "body-parser": "^1.15.2",
     "cache-manager": "^2.2.0",
     "cors": "^2.8.1",
+    "ejs": "^2.5.6",
     "express": "^4.14.0",
     "hogan.js": "^3.0.2",
     "hull": "^0.10.4",
@@ -66,7 +67,6 @@
     "librato-node": "^4.1.0",
     "lodash": "^4.16.6",
     "newrelic": "^1.33.0",
-    "nf": "^0.0.3",
     "passport-forcedotcom": "^0.1.4",
     "rimraf": "^2.5.4"
   },
@@ -75,6 +75,7 @@
     "eslint": "^3.9.1",
     "eslint-config-airbnb-base": "^10.0.1",
     "eslint-plugin-import": "^2.2.0",
+    "foreman": "^2.0.0",
     "jest": "^17.0.0",
     "rimraf": "^2.5.4"
   }

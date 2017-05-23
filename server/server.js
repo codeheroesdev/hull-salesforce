@@ -47,43 +47,55 @@ export default function Server({ hostSecret }) {
   app.use(express.static(path.resolve(__dirname, "..", "dist")));
   app.use(express.static(path.resolve(__dirname, "..", "assets")));
 
-  app.use("/auth", OAuthHandler({
-    hostSecret,
-    name: "Salesforce",
-    Strategy,
-    options: {
-      clientID: process.env.CLIENT_ID,
-      clientSecret: process.env.CLIENT_SECRET, // Client Secret
-      scope: ["refresh_token", "api"] // App Scope
-    },
-    isSetup(req, { /* hull,*/ ship }) {
-      if (!!req.query.reset) return Promise.reject();
-      const { access_token, refresh_token, instance_url } = ship.private_settings || {};
+  app.use("/auth", (req, res, next) => {
+    const token = req.query.token || req.query.state;
+    if (token && token.split(".").length === 3) {
+      req.hull = req.hull || {};
+      req.hull.token = token;
+    }
+    next();
+  }, Middleware({ hostSecret }), (req, res, next) => {
+    const oauthUrl = req.hull.ship.private_settings.salesforce_oauth_url || "https://login.salesforce.com";
+    OAuthHandler({
+      hostSecret,
+      name: "Salesforce",
+      Strategy,
+      options: {
+        clientID: process.env.CLIENT_ID,
+        clientSecret: process.env.CLIENT_SECRET, // Client Secret
+        authorizationURL: `${oauthUrl}/services/oauth2/authorize`,
+        tokenURL: `${oauthUrl}/services/oauth2/token`,
+        scope: ["refresh_token", "api"] // App Scope
+      },
+      isSetup(req, { /* hull,*/ ship }) {
+        if (!!req.query.reset) return Promise.reject();
+        const { access_token, refresh_token, instance_url } = ship.private_settings || {};
 
-      if (access_token && refresh_token && instance_url) return Promise.resolve(ship);
+        if (access_token && refresh_token && instance_url) return Promise.resolve(ship);
 
-      return Promise.reject();
-    },
-    onLogin: (req, { hull, ship }) => {
-      req.authParams = { ...req.body, ...req.query };
-      return Promise.resolve(req.authParams);
-    },
-    onAuthorize: (req, { hull, ship }) => {
-      const { refreshToken, params } = (req.account || {});
-      const { access_token, instance_url } = params || {};
-      const salesforce_login = _.get(req, "account.profile._raw.username");
-      return save(hull, ship, {
-        refresh_token: refreshToken,
-        access_token, instance_url, salesforce_login
-      });
-    },
-    views: {
-      login: "login.html",
-      home: "home.html",
-      failure: "failure.html",
-      success: "success.html"
-    },
-  }));
+        return Promise.reject();
+      },
+      onLogin: (req, { hull, ship }) => {
+        req.authParams = { ...req.body, ...req.query };
+        return Promise.resolve(req.authParams);
+      },
+      onAuthorize: (req, { hull, ship }) => {
+        const { refreshToken, params } = (req.account || {});
+        const { access_token, instance_url } = params || {};
+        const salesforce_login = _.get(req, "account.profile._raw.username");
+        return save(hull, ship, {
+          refresh_token: refreshToken,
+          access_token, instance_url, salesforce_login
+        });
+      },
+      views: {
+        login: "login.html",
+        home: "home.html",
+        failure: "failure.html",
+        success: "success.html"
+      },
+    })(req, res, next);
+  });
 
   app.post("/sync", Middleware({ hostSecret }), (req, res) => {
     const { client: hull, ship } = req.hull;

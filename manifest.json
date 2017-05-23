@@ -4,7 +4,7 @@
   "description" : "Send Users as Leads or Contacts to Salesforce with custom mappings",
   "readme" : "readme.md",
   "admin" : "/auth",
-  "version" : "0.2.1",
+  "version" : "0.2.2",
   "picture": "picture.png",
   "ui": false,
   "settings" : [
@@ -15,6 +15,12 @@
     }
   ],
   "private_settings" : [
+    {
+      "name": "salesforce_oauth_url",
+      "type": "string",
+      "format": "hidden",
+      "default": "https://login.salesforce.com"
+    },
     {
       "name": "refresh_token",
       "type": "string",
