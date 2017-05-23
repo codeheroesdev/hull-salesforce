@@ -71,7 +71,7 @@ function getRequiredField(type) {
   }
 }
 
-function getSoqlQuery(type, fields) {
+function getAllRecordsSoqlQuery(type, fields) {
   const defaultFields = getDefaultFields(type);
   const requiredField = getRequiredField(type);
   const selectFields = _.uniq(fields.concat(defaultFields)).join(",");
@@ -230,7 +230,7 @@ export default class SF {
 
   getAllRecords({ type, fields = [] }, onRecord) {
     return new Promise((resolve, reject) => {
-      const soql = getSoqlQuery(type, fields);
+      const soql = getAllRecordsSoqlQuery(type, fields);
       const query = this.connection.query(soql)
         .on("record", onRecord)
         .on("end", () => {
@@ -263,14 +263,14 @@ export default class SF {
             Promise.all(chunks)
               .then(_.flatten)
               .then((records) => {
-                resolve({ type, fields, records });
+                resolve(records);
                 if (records && records.length) {
                   increment("salesforce:updated_records", records.length, { source: this.connection._shipId });
                 }
               })
               .catch(reject);
           } else {
-            resolve({ type, fields, records: [] });
+            resolve([]);
           }
         }
       );

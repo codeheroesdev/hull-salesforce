@@ -227,6 +227,51 @@ export default class Agent extends EventEmitter {
     return traits;
   }
 
+  saveRecordTraits(record = {}) {
+    const type = record.attributes.type;
+    const traits = this.getRecordTraits(type, record);
+
+    if (!_.isEmpty(traits)) {
+      const promises = [];
+
+      switch (type) {
+
+        case "Account":
+          this.hull.logger.info("incoming.account", { domain: record.Website, traits });
+          return this.hull
+            .asAccount({ domain: record.Website })
+            .traits(traits)
+            .then(() => this.hull.logger.info("incoming.account.success", { domain: record.Website, traits }));
+
+        case "Contact":
+          this.hull.logger.info("incoming.user", { email: record.Email, traits });
+          promises.push(this.hull
+            .asUser({ email: record.Email })
+            .traits(traits)
+            .then(() => this.hull.logger.info("incoming.user.success", { email: record.Email, traits })));
+          // Link with this contact's account
+          if (record.Account && !_.isNil(record.Account.Website)) {
+            this.hull.logger.debug("incoming.account.link", { email: record.Email, domain: record.Account.Website });
+            promises.push(this.hull
+              .asUser({ email: record.Email })
+              .account({ domain: record.Account.Website })
+              .then(() => this.hull.logger.info("incoming.account.link.success", { email: record.Email, traits })));
+          }
+          return Promise.all(promises);
+
+        case "Lead":
+          this.hull.logger.info("incoming.user", { email: record.Email, traits });
+          return this.hull
+            .asUser({ email: record.Email })
+            .traits(traits)
+            .then(() => this.hull.logger.info("incoming.user.success", { email: record.Email, traits }));
+
+        default:
+          this.hull.logger.warn("error.unsupported_type", { type });
+      }
+    }
+  }
+
   shouldFetch = (type, fields) => fields && fields.length > 0 && (type !== "Account" || this.config.settings.fetch_accounts);
 
   fetchAll() {
@@ -235,49 +280,7 @@ export default class Agent extends EventEmitter {
       const fields = _.keys(fetchFields);
       if (this.shouldFetch(type, fields)) {
         this.hull.logger.info("incoming.job.start", { jobName: "fetchAll", type, fetchFields: fields });
-        return this.sf.getAllRecords({ type, fields }, (record = {}) => {
-          const traits = this.getRecordTraits(type, record);
-          if (!_.isEmpty(traits)) {
-            switch (type) {
-
-              case "Account":
-                this.hull.logger.info("incoming.account", { domain: record.Website, traits });
-                this.hull
-                  .asAccount({ domain: record.Website })
-                  .traits(traits)
-                  .then(() => this.hull.logger.info("incoming.account.success", { domain: record.Website, traits }));
-                break;
-
-              case "Contact":
-                this.hull.logger.info("incoming.user", { email: record.Email, traits });
-                this.hull
-                  .asUser({ email: record.Email })
-                  .traits(traits)
-                  .then(() => this.hull.logger.info("incoming.user.success", { email: record.Email, traits }));
-                // Link with this contact's account
-                if (record.Account && !_.isNil(record.Account.Website)) {
-                  this.hull.logger.debug("incoming.account.link", { email: record.Email, domain: record.Account.Website });
-                  this.hull
-                    .asUser({ email: record.Email })
-                    .account({ domain: record.Account.Website })
-                    .then(() => this.hull.logger.info("incoming.account.link.success", { email: record.Email, traits }));
-                }
-                break;
-
-              case "Lead":
-                this.hull.logger.info("incoming.user", { email: record.Email, traits });
-                this.hull
-                  .asUser({ email: record.Email })
-                  .traits(traits)
-                  .then(() => this.hull.logger.info("incoming.user.success", { email: record.Email, traits }));
-                break;
-
-              default:
-                this.hull.logger.warn("error.unsupported_type", { type });
-                break;
-            }
-          }
-        });
+        return this.sf.getAllRecords({ type, fields }, record => this.saveRecordTraits(record));
       }
     }));
   }
@@ -287,33 +290,15 @@ export default class Agent extends EventEmitter {
     return Promise.all(_.map(mappings, ({ type, fetchFields }) => {
       const fields = _.keys(fetchFields);
       this.hull.logger.info("incoming.job.start", { jobName: "fetchChanges", type, fetchFields });
-      if (fields && fields.length > 0) {
+      if (this.shouldFetch(type, fields)) {
         return this.sf.getUpdatedRecords(type, { ...options, fields });
       }
-      return { type, fields: fetchFields, records: [] };
-    })).then((changes) => {
-      const promises = [];
-      changes.forEach(({ type, records }) => {
-        records.forEach((record) => {
-          const traits = this.getRecordTraits(type, record);
-          if (!_.isEmpty(traits)) {
-            if (type === "Account" && this.config.settings.fetch_accounts) {
-              this.hull.logger.info("incoming.account", { domain: record.Website, traits });
-              promises.push(this.hull
-                .asAccount({ external_id: record.Id, domain: record.Website })
-                .traits(traits)
-                .then(() => this.hull.logger.info("incoming.account.success", { domain: record.Website, traits })));
-            } else if (type === "Lead" || type === "Contact") {
-              this.hull.logger.info("incoming.user", { email: record.Email, traits });
-              promises.push(this.hull
-                .asUser({ email: record.Email })
-                .traits(traits)
-                .then(() => this.hull.logger.info("incoming.user.success", { email: record.Email, traits })));
-            }
-          }
-        });
-      });
-      return Promise.all(promises).then(() => { return { changes }; });
+      return [];
+    }))
+    .then(_.flatten)
+    .then((records) => {
+      const promises = records.map(record => this.saveRecordTraits(record));
+      return Promise.all(promises).then(() => { return { records }; });
     });
   }
 
