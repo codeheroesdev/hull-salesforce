@@ -53,6 +53,10 @@ export function getUpdatedFields(user, sfObject, mapping) {
         }
       }
 
+      if (_.isArray(val)) {
+        val = val.join(";");
+      }
+
       if (!_.isNil(val) && (val !== orig)) mapped[f] = val;
     }
 

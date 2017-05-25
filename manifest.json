@@ -4,7 +4,7 @@
   "description" : "Send Users as Leads or Contacts to Salesforce with custom mappings",
   "readme" : "readme.md",
   "admin" : "/auth",
-  "version" : "0.2.2",
+  "version" : "0.2.3",
   "picture": "picture.png",
   "ui": false,
   "settings" : [
