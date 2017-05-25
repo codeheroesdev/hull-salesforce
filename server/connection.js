@@ -28,6 +28,10 @@ export default class Connection extends jsforce.Connection {
     this._shipId = shipId;
   }
 
+  setLogger(logger) {
+    this._logger = logger;
+  }
+
   request(request, options, callback) {
     increment('salesforce:requests', 1, { source: this._shipId });
     const ret = super.request(request, options, callback);
@@ -36,7 +40,7 @@ export default class Connection extends jsforce.Connection {
         measure('salesforce:used', this.limitInfo.apiUsage.used, { source: this._shipId });
       }
     }, (res) => {
-      console.warn('salesforce API error', JSON.stringify({request, options, res}));
+      this._logger.error("salesforce API error", { request, options, res });
       increment('salesforce:errors', 1, { source: this._shipId });
     });
     return ret;

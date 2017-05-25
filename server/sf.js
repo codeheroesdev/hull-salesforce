@@ -52,7 +52,8 @@ export class SF {
           log('upsert error', JSON.stringify({ err, res, externalIDFieldName, input }));
           this.logger.error("outgoing.user.error", {
             errors: err,
-            email: input[0].Email
+            email: input[0].Email,
+            log_placement: "_upsertSoap.1"
           });
           reject(err);
         } else {
@@ -64,17 +65,20 @@ export class SF {
                 console.log('upsert error', JSON.stringify({ res: r, input: input[idx] }));
                 this.logger.error("outgoing.user.error", {
                   errors: r.errors,
-                  email: input[idx].Email
+                  email: input[idx].Email,
+                  log_placement: "_upsertSoap.2"
                 });
               } else {
                 this.logger.info("outgoing.user.success", {
-                  email: input[idx].Email
+                  email: input[idx].Email,
+                  log_placement: "_upsertSoap.3"
                 });
               }
             });
           } else {
             this.logger.info("outgoing.user.success", {
-              email: input[0].Email
+              email: input[0].Email,
+              log_placement: "_upsertSoap.4"
             });
           }
           resolve(res);
@@ -92,7 +96,8 @@ export class SF {
           console.log('upsert error', JSON.stringify({ err, res, extIdField, input }));
           this.logger("outgoing.user.error", {
             email: input[0].Email,
-            errors: err
+            errors: err,
+            log_placement: "_upsertBulk.1"
           });
           reject(err);
         } else {
@@ -103,7 +108,8 @@ export class SF {
                 console.log('bulk upsert error', JSON.stringify({ res: r, input: input[idx] }));
                 this.logger("outgoing.user.error", {
                   email: input[idx].Email,
-                  errors: r.errors
+                  errors: r.errors,
+                  log_placement: "_upsertBulk.2"
                 });
               }
             });
