@@ -255,6 +255,7 @@ export default class Agent extends EventEmitter {
             promises.push(this.hull
               .asUser({ email: record.Email })
               .account({ domain: record.Account.Website })
+              .traits({})
               .then(() => this.hull.logger.info("incoming.account.link.success", { email: record.Email, traits })));
           }
           return Promise.all(promises);
@@ -270,6 +271,7 @@ export default class Agent extends EventEmitter {
           this.hull.logger.warn("error.unsupported_type", { type });
       }
     }
+    return Promise.resolve();
   }
 
   shouldFetch = (type, fields) => fields && fields.length > 0 && (type !== "Account" || this.config.settings.fetch_accounts);
@@ -282,6 +284,7 @@ export default class Agent extends EventEmitter {
         this.hull.logger.info("incoming.job.start", { jobName: "fetchAll", type, fetchFields: fields });
         return this.sf.getAllRecords({ type, fields }, record => this.saveRecordTraits(record));
       }
+      return Promise.resolve();
     }));
   }
 
@@ -316,6 +319,7 @@ export default class Agent extends EventEmitter {
             return { recordType, results, records };
           });
         }
+        return Promise.resolve();
       });
       return Promise.all(upsertResults).then((results) => {
         return results.reduce((rr, r) => {
