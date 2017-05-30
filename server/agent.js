@@ -245,7 +245,7 @@ export default class Agent extends EventEmitter {
           // Link with this contact's account
           if (record.Account && !_.isNil(record.Account.Website)) {
             this.hull.logger.debug("account.link", { email: record.Email, domain: record.Account.Website });
-            promises.push(this.hull.asUser({ email: record.Email }).account({ domain: record.Account.Website }));
+            promises.push(this.hull.asUser({ email: record.Email }).account({ domain: record.Account.Website }).traits({}));
           }
           return Promise.all(promises);
         case "Lead":
@@ -255,6 +255,7 @@ export default class Agent extends EventEmitter {
           this.hull.logger.warn("unknown record type", { type });
       }
     }
+    return Promise.resolve();
   }
 
   shouldFetch = (type, fields) => fields && fields.length > 0 && (type !== "Account" || this.config.settings.fetch_accounts);
@@ -266,6 +267,7 @@ export default class Agent extends EventEmitter {
       if (this.shouldFetch(type, fields)) {
         return this.sf.getAllRecords({ type, fields }, record => this.saveRecordTraits(record));
       }
+      return Promise.resolve();
     }));
   }
 
@@ -299,6 +301,7 @@ export default class Agent extends EventEmitter {
             return { recordType, results, records };
           });
         }
+        return Promise.resolve();
       });
       return Promise.all(upsertResults).then((results) => {
         return results.reduce((rr, r) => {
