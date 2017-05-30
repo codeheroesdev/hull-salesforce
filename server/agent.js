@@ -237,20 +237,21 @@ export default class Agent extends EventEmitter {
       switch (type) {
 
         case "Account":
-          this.hull.logger.info("incoming.account", { domain: record.Website, traits });
+          this.hull.logger.info("incoming.account", { traits });
           return this.hull
             .asAccount({ domain: record.Website })
             .traits(traits)
-            .then(() => this.hull.logger.info("incoming.account.success", { domain: record.Website, traits }));
+            .then(() => this.hull.logger.info("incoming.account.success", { traits }));
 
         case "Contact":
           this.hull.logger.info("incoming.user", { email: record.Email, traits });
           promises.push(this.hull
             .asUser({ email: record.Email })
             .traits(traits)
-            .then(() => this.hull.logger.info("incoming.user.success", { email: record.Email, traits })));
+            .then(() => this.hull.logger.info("incoming.user.success", { type, traits })));
+
           // Link with this contact's account
-          if (record.Account && !_.isNil(record.Account.Website)) {
+          if (this.config.settings.fetch_accounts && record.Account && !_.isNil(record.Account.Website)) {
             this.hull.logger.debug("incoming.account.link", { email: record.Email, domain: record.Account.Website });
             promises.push(this.hull
               .asUser({ email: record.Email })

@@ -38,6 +38,7 @@ You can customize the attributes which are getting synchronized with Salesforce 
 ![Leads Sync](./docs/leadsync01.png)
 The second list determines the attributes Hull fetches from Salesforce. Salesforce data will always take precedence over data in Hull and update the user’s respective attributes. Hull saves the data obtained from Salesforce in the attribute group “Salesforce Lead”, so no standard attribute data will be overwritten.
 
+
 ## Determine the Attributes to synchronize for Contacts
 
 You can customize the attributes which are getting synchronized with Salesforce in the section “Contacts Sync” of the “Settings” tab. The first list determines the attributes who are getting sent from Hull to Salesforce. You can specify for each attribute whether data in Hull takes precedence over data in Salesforce by toggling the checkbox “overwrite”. If the box is checked, data from Hull will always take update the Contact record; if the box is unchecked, the attribute in Salesforce will only be updated with data from Hull if it has not been set.
@@ -50,6 +51,8 @@ You can configure the Connector to connect to a specific Sandbox system. Go to t
 Switch to the tab “Dashboard” and click on “Start Over” to authenticate against your Sandbox system; the steps to authenticate are described in [Getting Started](#getting-started).
 ![Advanced Settings - Sandbox](./docs/advancedsettings01.png)
 Note: If you want to authenticate against your production environment, change this setting back to `https://login.salesforce.com` and click “Start Over” on the “Dashboard” tab. It is not recommended to switch between Salesforce environments within the same Hull organization because it can lead to inconsistent data. Please make sure that you understand the ramifications when changing this parameter.
+
+### Custom mappings
 
 ## Learn how Hull determines if a user is a Lead or Contact
 
