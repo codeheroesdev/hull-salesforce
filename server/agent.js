@@ -142,7 +142,7 @@ export default class Agent extends EventEmitter {
 
       // Hull
       this.hull = new Hull(this.config.hull);
-
+      conn.setLogger(this.hull.logger);
     });
 
     connect.catch((err) => {
@@ -161,6 +161,7 @@ export default class Agent extends EventEmitter {
     conn.setShipId(shipId);
 
     this.hull = new Hull(this.config.hull);
+    conn.setLogger(this.hull.logger);
     this.sf = new SF(conn, this.hull);
     this._connect = Promise.resolve(conn);
 

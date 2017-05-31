@@ -137,7 +137,7 @@ export default function Server({ hostSecret }) {
           }
           return true;
         } catch (err) {
-          console.warn("Error in Users sync", err, err.stack);
+          hull.logger.error("Error in Users sync", { err });
           return err;
         }
       }
@@ -153,7 +153,7 @@ export default function Server({ hostSecret }) {
       return Agent
         .syncUsers(hull, ship, users, { applyFilters: false })
         .then(() => console.warn("batch done"))
-        .catch(err => console.warn("batch err", err));
+        .catch(err => hull.logger.error("batch err", { err }));
     }
   }));
 
