@@ -50,8 +50,16 @@ export class SF {
         if (err) {
           increment('salesforce:errors', 1, { source: this.connection._shipId });
           log('upsert error', JSON.stringify({ err, res, externalIDFieldName, input }));
+
+          let errors = err;
+
+          if (err && err.errorCode === 'soapenv:Client') {
+            errors = err.toString();
+          }
+
           this.logger.error("outgoing.user.error", {
-            errors: err,
+            errors,
+            message: err && err.message,
             email: input[0].Email,
             log_placement: "_upsertSoap.1"
           });
@@ -59,7 +67,7 @@ export class SF {
         } else {
           console.log("upsert success", JSON.stringify({ err, res, externalIDFieldName, input }));
           if (_.isArray(res)) {
-            res.map((r,idx) => {
+            res.map((r, idx) => {
               increment('salesforce:errors', 1, { source: this.connection._shipId });
               if (r.success !== 'true') {
                 console.log('upsert error', JSON.stringify({ res: r, input: input[idx] }));
@@ -76,10 +84,18 @@ export class SF {
               }
             });
           } else {
-            this.logger.info("outgoing.user.success", {
-              email: input[0].Email,
-              log_placement: "_upsertSoap.4"
-            });
+            if (res.success !== 'true' || res.errors) {
+              this.logger.error("outgoing.user.error", {
+                errors: res.errors,
+                email: input[0].Email,
+                log_placement: "_upsertSoap.4"
+              });
+            } else {
+              this.logger.info("outgoing.user.success", {
+                email: input[0].Email,
+                log_placement: "_upsertSoap.5"
+              });
+            }
           }
           resolve(res);
         }
