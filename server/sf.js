@@ -33,7 +33,7 @@ export class SF {
   }
 
   upsert(type, input, externalIDFieldName='Email') {
-    return input.length > 99 ?
+    return input.length > 0 ?
       this._upsertBulk(type, input, externalIDFieldName) :
       this._upsertSoap(type, input, externalIDFieldName);
   }
@@ -113,22 +113,41 @@ export class SF {
           this.logger("outgoing.user.error", {
             email: input[0].Email,
             errors: err,
+            message: err.message,
             log_placement: "_upsertBulk.1"
           });
           reject(err);
         } else {
           if (_.isArray(res)) {
-            res.map((r,idx) => {
+            res.map((r, idx) => {
               increment('salesforce:errors', 1, { source: this.connection._shipId });
               if (r.success.toString() !== 'true') {
                 console.log('bulk upsert error', JSON.stringify({ res: r, input: input[idx] }));
-                this.logger("outgoing.user.error", {
+                this.logger.error("outgoing.user.error", {
                   email: input[idx].Email,
                   errors: r.errors,
                   log_placement: "_upsertBulk.2"
                 });
+              } else {
+                this.logger.info("outgoing.user.success", {
+                  email: input[idx].Email,
+                  log_placement: "_upsertBulk.3"
+                });
               }
             });
+          } else {
+            if (res.success.toString() !== 'true' || res.errors) {
+              this.logger.error("outgoing.user.error", {
+                errors: res.errors,
+                email: input[0].Email,
+                log_placement: "_upsertBulk.4"
+              });
+            } else {
+              this.logger.info("outgoing.user.success", {
+                email: input[0].Email,
+                log_placement: "_upsertBulk.5"
+              });
+            }
           }
           resolve(res);
         }
