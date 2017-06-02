@@ -8,10 +8,7 @@ import { Strategy } from "passport-forcedotcom";
 import Agent from "./agent";
 
 module.exports = function Server(app, options = {}) {
-  const { hostSecret, port } = options;
-  const connector = new Hull.Connector({ hostSecret, port });
-
-  connector.setupApp(app);
+  const { hostSecret } = options;
 
   app.use("/auth", oAuthHandler({
     hostSecret,
@@ -38,7 +35,7 @@ module.exports = function Server(app, options = {}) {
       const { refreshToken, params } = (req.account || {});
       const { access_token, instance_url } = params || {};
       const salesforce_login = _.get(req, "account.profile._raw.username");
-      return req.hull.client.utils.settings.update({
+      return req.hull.helpers.updateSettings({
         refresh_token: refreshToken,
         access_token,
         instance_url,
@@ -53,7 +50,7 @@ module.exports = function Server(app, options = {}) {
     },
   }));
 
-  app.post("/sync", connector.clientMiddleware(), (req, res) => {
+  app.post("/sync", (req, res) => {
     const { client: hull, ship } = req.hull;
     Agent.fetchChanges(hull, ship).then((result) => {
       res.json({ ok: true, result });
@@ -64,7 +61,7 @@ module.exports = function Server(app, options = {}) {
     });
   });
 
-  app.post("/fetch-all", connector.clientMiddleware(), (req, res) => {
+  app.post("/fetch-all", (req, res) => {
     const { client: hull, ship } = req.hull;
     Agent.fetchAll(hull, ship).then((result) => {
       res.json({ ok: true, result });
@@ -132,7 +129,7 @@ module.exports = function Server(app, options = {}) {
     }
   }));
 
-  app.get("/schema(/:type)", cors(), connector.clientMiddleware({ requireCredentials: false }), (req, res) => {
+  app.get("/schema(/:type)", cors(), (req, res) => {
     const { type } = req.params || {};
     const { client: hull, ship } = req.hull;
     return Agent.getFieldsSchema(hull, ship).then((definitions = {}) => {
@@ -144,8 +141,6 @@ module.exports = function Server(app, options = {}) {
       res.json({ ok: false, error: err.message, options: [] });
     });
   });
-
-  connector.startApp(app);
 
   return app;
 };
