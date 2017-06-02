@@ -1,9 +1,9 @@
 /* eslint-disable */
-jest.dontMock("../sf");
+jest.dontMock("../lib/sf");
 jest.dontMock("lodash");
 jest.dontMock("jsforce");
 
-import { searchQuery, getMatchingPattern } from "../sf";
+import { searchQuery, getMatchingPattern } from "../lib/sf";
 
 const mappings = {
   Foo: {

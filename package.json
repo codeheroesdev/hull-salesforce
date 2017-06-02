@@ -63,6 +63,7 @@
     "hogan.js": "^3.0.2",
     "hull": "^0.11.0",
     "jsforce": "^1.7.1",
+    "librato-node": "^5.0.0",
     "lodash": "^4.16.6",
     "newrelic": "^1.33.0",
     "node-babel": "^0.1.2",
