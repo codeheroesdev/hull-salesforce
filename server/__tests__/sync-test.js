@@ -1,8 +1,8 @@
 /* eslint-disable */
-jest.dontMock("../sync");
+jest.dontMock("../lib/sync");
 jest.dontMock("hogan.js");
 
-import { syncUsers, syncAccounts, getUpdatedFields } from "../sync";
+import { syncUsers, syncAccounts, getUpdatedFields } from "../lib/sync";
 
 const Mappings = {
   Lead: {

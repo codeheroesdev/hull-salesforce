@@ -5,7 +5,7 @@ import Hull from "hull";
 import { notifHandler, batchHandler, oAuthHandler } from "hull/lib/utils";
 import { Strategy } from "passport-forcedotcom";
 
-import Agent from "./agent";
+import Agent from "./lib/agent";
 
 module.exports = function Server(app, options = {}) {
   const { hostSecret } = options;
