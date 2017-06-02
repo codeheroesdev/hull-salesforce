@@ -110,7 +110,7 @@ export class SF {
       return SObject.upsertBulk(input, extIdField, (err, res)=> {
         if (err) {
           console.log('upsert error', JSON.stringify({ err, res, extIdField, input }));
-          this.logger("outgoing.user.error", {
+          this.logger.error("outgoing.user.error", {
             email: input[0].Email,
             errors: err,
             message: err.message,
