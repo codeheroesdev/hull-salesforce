@@ -1,1 +1,1 @@
-web: NODE_ENV=production node -r newrelic build/web
+web: NODE_ENV=production node -r newrelic build
