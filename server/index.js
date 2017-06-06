@@ -23,19 +23,5 @@ const app = express();
 
 connector.setupApp(app);
 
-function exitNow() {
-  Hull.logger.warn("Exiting now !");
-  process.exit();
-}
-
-function handleExit() {
-  Hull.logger.log("Exiting... waiting 30 seconds workers to flush");
-  setTimeout(exitNow, 30000);
-  server.exit().then(exitNow);
-}
-
-process.on("SIGINT", handleExit);
-process.on("SIGTERM", handleExit);
-
 server(app, config);
 connector.startApp(app);
