@@ -1,3 +1,6 @@
+## v0.2.5
+- revert the value of limit above which the SFDC client switch to bulk API
+
 ## v0.2.4
 - fix logging
 
