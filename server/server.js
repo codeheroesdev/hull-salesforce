@@ -1,52 +1,16 @@
 import _ from "lodash";
-import express from "express";
 import cors from "cors";
-import path from "path";
-import { Hull, NotifHandler, BatchHandler, Middleware, OAuthHandler } from "hull";
-import { Strategy } from "passport-forcedotcom";
 import librato from "librato-node";
-import { renderFile } from "ejs";
+import Hull from "hull";
+import { notifHandler, batchHandler, oAuthHandler } from "hull/lib/utils";
+import { Strategy } from "passport-forcedotcom";
 
-import BatchSyncHandler from "./batch-sync";
-import Agent from "./agent";
+import Agent from "./lib/agent";
 
+module.exports = function Server(app, options = {}) {
+  const { hostSecret } = options;
 
-function save(hull, ship, settings) {
-  return hull.put(ship.id, {
-    private_settings: {
-      ...ship.private_settings,
-      ...settings
-    }
-  });
-}
-
-
-export default function Server({ hostSecret }) {
-  if (process.env.LIBRATO_TOKEN && process.env.LIBRATO_USER) {
-    librato.configure({
-      email: process.env.LIBRATO_USER,
-      token: process.env.LIBRATO_TOKEN
-    });
-    // librato.on("error", () => {
-    //   console.error(err);
-    // });
-
-    process.once("SIGINT", () => {
-      librato.stop(); // stop optionally takes a callback
-    });
-
-    librato.start();
-  }
-
-  const app = express();
-
-  app.set("views", `${__dirname}/../views`);
-  app.set("view engine", "ejs");
-  app.engine("html", renderFile);
-  app.use(express.static(path.resolve(__dirname, "..", "dist")));
-  app.use(express.static(path.resolve(__dirname, "..", "assets")));
-
-  app.use("/auth", OAuthHandler({
+  app.use("/auth", oAuthHandler({
     hostSecret,
     name: "Salesforce",
     Strategy,
@@ -55,25 +19,27 @@ export default function Server({ hostSecret }) {
       clientSecret: process.env.CLIENT_SECRET, // Client Secret
       scope: ["refresh_token", "api"] // App Scope
     },
-    isSetup(req, { /* hull,*/ ship }) {
-      if (!!req.query.reset) return Promise.reject();
-      const { access_token, refresh_token, instance_url } = ship.private_settings || {};
+    isSetup(req) {
+      if (req.query.reset) return Promise.reject();
+      const { access_token, refresh_token, instance_url } = req.hull.ship.private_settings || {};
 
-      if (access_token && refresh_token && instance_url) return Promise.resolve(ship);
+      if (access_token && refresh_token && instance_url) return Promise.resolve(req.hull.ship);
 
       return Promise.reject();
     },
-    onLogin: (req, { hull, ship }) => {
+    onLogin: (req) => {
       req.authParams = { ...req.body, ...req.query };
       return Promise.resolve(req.authParams);
     },
-    onAuthorize: (req, { hull, ship }) => {
+    onAuthorize: (req) => {
       const { refreshToken, params } = (req.account || {});
       const { access_token, instance_url } = params || {};
       const salesforce_login = _.get(req, "account.profile._raw.username");
-      return save(hull, ship, {
+      return req.hull.helpers.updateSettings({
         refresh_token: refreshToken,
-        access_token, instance_url, salesforce_login
+        access_token,
+        instance_url,
+        salesforce_login
       });
     },
     views: {
@@ -84,7 +50,7 @@ export default function Server({ hostSecret }) {
     },
   }));
 
-  app.post("/sync", Middleware({ hostSecret }), (req, res) => {
+  app.post("/sync", (req, res) => {
     const { client: hull, ship } = req.hull;
     Agent.fetchChanges(hull, ship).then((result) => {
       res.json({ ok: true, result });
@@ -95,7 +61,7 @@ export default function Server({ hostSecret }) {
     });
   });
 
-  app.post("/fetch-all", Middleware({ hostSecret }), (req, res) => {
+  app.post("/fetch-all", (req, res) => {
     const { client: hull, ship } = req.hull;
     Agent.fetchAll(hull, ship).then((result) => {
       res.json({ ok: true, result });
@@ -106,9 +72,14 @@ export default function Server({ hostSecret }) {
     });
   });
 
-  app.post("/notify", NotifHandler({
+  app.post("/notify", notifHandler({
+    // TODO: add an accountHandlerOptions here ?
+    userHandlerOptions: {
+      groupTraits: false,
+      maxSize: 1,
+      maxTime: 1
+    },
     hostSecret,
-    groupTraits: false,
     onSusbscribe(message, context) {
       Hull.logger.warn("Hello new subscriber !", { message, context });
     },
@@ -116,9 +87,9 @@ export default function Server({ hostSecret }) {
       Hull.logger.warn("Error", status, message);
     },
     handlers: {
-      "user:update": ({ message }, { ship, hull }) => {
+      "user:update": ({ client, ship }, messages) => {
         try {
-          BatchSyncHandler.handle(message, { ship, hull });
+          Agent.syncUsers({ client, ship }, messages);
           if (process.env.LIBRATO_TOKEN && process.env.LIBRATO_USER) {
             librato.increment("user_report:update", 1, { source: ship.id });
           }
@@ -127,11 +98,25 @@ export default function Server({ hostSecret }) {
           Hull.logger.warn("Error in Users sync", err, err.stack);
           return err;
         }
+      },
+      // account:update messages are not batched and are received one by one
+      "account:update": ({ ship, client }, message) => {
+        const messages = [message];
+        try {
+          Agent.syncAccounts({ client, ship }, messages);
+          if (process.env.LIBRATO_TOKEN && process.env.LIBRATO_USER) {
+            librato.increment("account_report:update", 1, { source: ship.id });
+          }
+          return true;
+        } catch (err) {
+          Hull.logger.warn("Error in Accounts sync", err, err.stack);
+          return err;
+        }
       }
     }
   }));
 
-  app.post("/batch", BatchHandler({
+  app.post("/batch", batchHandler({
     hostSecret,
     batchSize: 2000,
     groupTraits: false,
@@ -144,25 +129,18 @@ export default function Server({ hostSecret }) {
     }
   }));
 
-  app.get("/manifest.json", (req, res) => {
-    res.sendFile(path.resolve(__dirname, "..", "manifest.json"));
-  });
-
-  app.get("/schema(/:type)", cors(), Middleware({ hostSecret, requireCredentials: false }), (req, res) => {
+  app.get("/schema(/:type)", cors(), (req, res) => {
     const { type } = req.params || {};
     const { client: hull, ship } = req.hull;
     return Agent.getFieldsSchema(hull, ship).then((definitions = {}) => {
-      const options = (definitions[type] || []).map((t) => {
+      const schema = (definitions[type] || []).map((t) => {
         return { value: t, label: t };
       });
-      return res.json({ options });
+      return res.json({ options: schema });
     }).catch((err) => {
       res.json({ ok: false, error: err.message, options: [] });
     });
   });
 
-  return {
-    listen: port => app.listen(port),
-    exit: () => BatchSyncHandler.exit()
-  };
-}
+  return app;
+};

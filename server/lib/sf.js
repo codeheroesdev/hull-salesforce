@@ -18,7 +18,7 @@ function escapeSOSL(str) {
   return str.replace(RESERVED_CHARACTERS_REGEXP, c => `\\${c}`);
 }
 
-export function searchEmailsQuery(emails, mappings) {
+export function searchQuery(field, emails, mappings) {
   const findEmails = emails.reduce((a, e) => {
     if (e && e.length > 3) {
       a.push(`"${escapeSOSL(e)}"`);
@@ -31,16 +31,57 @@ export function searchEmailsQuery(emails, mappings) {
     ret.push(`${type}(${fieldsList.join(",")})`);
     return ret;
   }, []);
-  const qry = `FIND {${findEmails.join(" OR ")}} IN Email FIELDS RETURNING ${Returning.join(", ")}`;
+  const qry = `FIND {${findEmails.join(" OR ")}} IN ${field} FIELDS RETURNING ${Returning.join(", ")}`;
 
   return qry;
 }
 
+export function getMatchingPattern(s, patterns) {
+  let result = null;
+  patterns.some((pattern) => {
+    if (s.match(pattern)) {
+      result = pattern;
+      return true;
+    }
+    return false;
+  });
+  return result;
+}
 
-export class SF {
-  constructor(connection, hullClient) {
+function getDefaultFields(type) {
+  switch (type) {
+    case "Account":
+      return ["Id", "Website"];
+    case "Contact":
+      return ["Id", "Email", "FirstName", "LastName", "Account.Website"];
+    case "Lead":
+      return ["Id", "Email", "FirstName", "LastName"];
+    default:
+      return ["Id"];
+  }
+}
+
+function getRequiredField(type) {
+  switch (type) {
+    case "Account":
+      return "Website";
+    default:
+      return "Email";
+  }
+}
+
+function getAllRecordsSoqlQuery(type, fields) {
+  const defaultFields = getDefaultFields(type);
+  const requiredField = getRequiredField(type);
+  const selectFields = _.uniq(fields.concat(defaultFields)).join(",");
+
+  return `SELECT ${selectFields} FROM ${type} WHERE ${requiredField} != null`;
+}
+
+export default class SF {
+  constructor(connection, logger) {
     this.connection = connection;
-    this.logger = hullClient.logger;
+    this.logger = logger;
   }
 
   upsert(type, input = [], externalIDFieldName = "Email") {
@@ -138,19 +179,20 @@ export class SF {
   *
   */
   getRecordsByIds(type, ids, options = {}) {
+    const defaultFields = getDefaultFields(type);
+    const requiredField = getRequiredField(type);
     const fieldsList = (options && options.fields && options.fields.length > 0) ? Promise.resolve(options.fields) : this.getFieldsList(type).then(_.keys);
     return fieldsList.then((fields) => {
-      const selectFields = _.uniq(fields.concat(["Id", "Email", "FirstName", "LastName"])).join(",");
+      const selectFields = _.uniq(fields.concat(defaultFields)).join(",");
       const idsList = ids.map(f => `'${f}'`).join(",");
-      const query = `SELECT ${selectFields} FROM ${type} WHERE Id IN (${idsList}) AND Email != null`;
+      const query = `SELECT ${selectFields} FROM ${type} WHERE Id IN (${idsList}) AND ${requiredField} != null`;
       return this.exec("query", query).then(({ records }) => records);
     });
   }
 
   getAllRecords({ type, fields = [] }, onRecord) {
-    const selectFields = _.uniq(fields.concat(["Id", "Email", "FirstName", "LastName"])).join(",");
     return new Promise((resolve, reject) => {
-      const soql = `SELECT ${selectFields} FROM ${type} WHERE Email != null`;
+      const soql = getAllRecordsSoqlQuery(type, fields);
       const query = this.connection.query(soql)
         .on("record", onRecord)
         .on("end", () => {
@@ -167,6 +209,7 @@ export class SF {
     const fields = options.fields || [];
     const since = options.since ? new Date(options.since) : new Date(new Date().getTime() - (3600 * 1000));
     const until = options.until ? new Date(options.until) : new Date();
+
     return new Promise((resolve, reject) => {
       return this.connection.sobject(type).updated(
         since.toISOString(),
@@ -182,14 +225,14 @@ export class SF {
             Promise.all(chunks)
               .then(_.flatten)
               .then((records) => {
-                resolve({ type, fields, records });
+                resolve(records);
                 if (records && records.length) {
                   increment("salesforce:updated_records", records.length, { source: this.connection._shipId });
                 }
               })
               .catch(reject);
           } else {
-            resolve({ type, fields, records: [] });
+            resolve([]);
           }
         }
       );
@@ -208,19 +251,43 @@ export class SF {
     });
   }
 
-  searchEmails(emails = [], mappings) {
+  searchEmails(emails, mappings) {
     if (emails.length === 0) return Promise.resolve({});
 
     const chunks = _.chunk(emails, 100);
     const searches = chunks.map(
-      chunk => this.exec("search", searchEmailsQuery(chunk, mappings))
+      chunk => this.exec("search", searchQuery("EMAIL", chunk, mappings))
     );
 
     return Promise.all(searches).then((results) => {
       return results.reduce((recs, { searchRecords = [] }) => {
-        searchRecords.forEach((o) => {
-          recs[o.Email] = recs[o.Email] || {};
-          recs[o.Email][o.attributes.type] = o;
+        searchRecords.forEach((record) => {
+          recs[record.Email] = recs[record.Email] || {};
+          recs[record.Email][record.attributes.type] = record;
+        });
+        return recs;
+      }, {});
+    });
+  }
+
+  searchDomains(domains = [], mappings) {
+    if (domains.length === 0) return Promise.resolve({});
+
+    const chunks = _.chunk(domains, 100);
+    const searches = chunks.map(
+      chunk => this.exec("search", searchQuery("NAME", chunk, mappings))
+    );
+
+    return Promise.all(searches).then((results) => {
+      return results.reduce((recs, { searchRecords = [] }) => {
+        searchRecords.forEach((record) => {
+          if (record.attributes.type === "Account") {
+            // TODO: Add resolution strategy in case several sf records match the domain
+            const domain = getMatchingPattern(record.Website, domains);
+            if (domain) {
+              recs[domain] = record;
+            }
+          }
         });
         return recs;
       }, {});

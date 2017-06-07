@@ -3,10 +3,9 @@ import Hull from "hull";
 import { EventEmitter } from "events";
 import cacheManager from "cache-manager";
 
-import { SF } from "./sf";
-import { syncRecords } from "./sync";
+import SF from "./sf";
+import { syncUsers, syncAccounts } from "./sync";
 import Connection from "./connection";
-
 import { buildConfigFromShip } from "./config";
 
 function toUnderscore(str) {
@@ -19,23 +18,42 @@ function traitName(source, hullGroupField, salesforceField) {
   return !_.isNil(hullGroupField) ? `${source}/${hullGroupField}` : `${source}/${toUnderscore(salesforceField)}`;
 }
 
+function getUsersMatchingSegments(users, segmentIds = []) {
+  return users.filter((user) => {
+    const ids = (user.segments || []).map(s => s.id);
+    return _.intersection(ids, segmentIds).length > 0;
+  });
+}
+
 const Cache = cacheManager.caching({ store: "memory", max: 100, ttl: 60 });
 
 export default class Agent extends EventEmitter {
 
-  static syncUsers(hull, ship, users, options = {}) {
-    const { applyFilters = true } = options;
-    const { organization, secret } = hull.configuration();
+  static syncUsers({ client, ship }, messages) {
+    const { organization, secret } = client.configuration();
     const config = buildConfigFromShip(ship, organization, secret);
     const agent = new Agent(config);
-    const matchingUsers = applyFilters ? agent.getUsersMatchingSegments(users) : users;
+    const matchingUsers = getUsersMatchingSegments(messages, config.sync.userSegmentIds);
     let result = Promise.resolve({});
     if (matchingUsers.length > 0) {
       result = agent.connect().then(() => {
         return agent.syncUsers(matchingUsers.map(u => u.user));
       });
     }
+    return result;
+  }
 
+  static syncAccounts({ client, ship }, messages) {
+    const { organization, secret } = client.configuration();
+    const config = buildConfigFromShip(ship, organization, secret);
+    const agent = new Agent(config);
+    const matchingAccounts = getUsersMatchingSegments(messages, config.sync.accountSegmentIds);
+    let result = Promise.resolve({});
+    if (matchingAccounts.length > 0) {
+      result = agent.connect().then(() => {
+        return agent.syncAccounts(matchingAccounts.map(a => a.account));
+      });
+    }
     return result;
   }
 
@@ -60,11 +78,11 @@ export default class Agent extends EventEmitter {
     }
 
     return agent.connect().then(() => {
-      const last_sync_at = new Date().getTime();
+      const sync_at = new Date().getTime();
       return agent.fetchChanges(options).then(() => {
         hull.get(ship.id).then(({ settings }) => {
           hull.put(ship.id, { settings: {
-            ...settings, last_sync_at
+            ...settings, last_sync_at: sync_at
           } });
         });
       });
@@ -120,6 +138,9 @@ export default class Agent extends EventEmitter {
     const { login, password, loginUrl } = this.config.salesforce;
 
     const connect = new Promise((resolve, reject) => {
+      // Hull
+      this.hull = new Hull(this.config.hull);
+
       // Salesforce
       const conn = new Connection({ loginUrl });
       conn.setShipId(this.config.hull.id);
@@ -130,7 +151,7 @@ export default class Agent extends EventEmitter {
             reject(err);
           } else {
             this.emit("connect", userInfo);
-            this.sf = new SF(conn, new Hull(this.config.hull));
+            this.sf = new SF(conn, this.hull.logger);
             this.userInfo = userInfo;
             resolve(conn);
           }
@@ -172,14 +193,6 @@ export default class Agent extends EventEmitter {
     return this._connect;
   }
 
-  getUsersMatchingSegments(users) {
-    const { segmentIds } = this.config.sync || {};
-    return users.filter((user) => {
-      const ids = (user.segments || []).map(s => s.id);
-      return _.intersection(ids, segmentIds).length > 0;
-    });
-  }
-
   getFieldsSchema() {
     const { mappings } = this.config;
     return Promise.all(_.map(mappings, ({ type }) => {
@@ -198,38 +211,69 @@ export default class Agent extends EventEmitter {
   }
 
   getRecordTraits(type, record) {
-    const source = `salesforce_${type.toLowerCase()}`;
+    const source = type === "Account" ? "salesforce" : `salesforce_${type.toLowerCase()}`;
     const traits = {};
     const mappings = this.config.mappings[type];
 
     // Adds salesforce attribute
     _.map(mappings.fetchFields, (hullGroupField, salesforceField) => {
-      if (_.has(record, salesforceField)) {
+      if (!_.isNil(record[salesforceField])) {
         _.set(traits, traitName(source, hullGroupField, salesforceField), record[salesforceField]);
       }
     });
 
     // Adds hull top level property if the salesforce attribute can be mapped
     _.map(mappings.fetchFieldsToTopLevel, (hullTopLevelField, salesforceField) => {
-      if (!_.isNil(hullTopLevelField) && _.has(record, salesforceField)) {
+      if (!_.isNil(record[salesforceField]) && !_.isNil(hullTopLevelField)) {
         _.set(traits, hullTopLevelField, { value: record[salesforceField], operation: "setIfNull" });
       }
     });
     return traits;
   }
 
+  saveRecordTraits(record = {}) {
+    const type = record.attributes.type;
+    const traits = this.getRecordTraits(type, record);
+
+    if (!_.isEmpty(traits)) {
+      const promises = [];
+
+      switch (type) {
+        case "Account":
+          this.hull.logger.info("incoming.account", traits);
+          return this.hull.asAccount({ domain: record.Website }).traits(traits);
+
+        case "Contact":
+          this.hull.logger.info("incoming.user", { type, ...traits });
+          promises.push(this.hull.asUser({ email: record.Email }).traits(traits));
+
+          // Link with this contact's account
+          if (this.config.settings.fetch_accounts && record.Account && !_.isNil(record.Account.Website)) {
+            this.hull.logger.debug("account.link", { email: record.Email, domain: record.Account.Website });
+            promises.push(this.hull.asUser({ email: record.Email }).account({ domain: record.Account.Website }).traits({}));
+          }
+          return Promise.all(promises);
+
+        case "Lead":
+          this.hull.logger.info("incoming.user", { type, ...traits });
+          return this.hull.asUser({ email: record.Email }).traits(traits);
+        default:
+          this.hull.logger.warn("unknown record type", { type });
+      }
+    }
+    return Promise.resolve();
+  }
+
+  shouldFetch = (type, fields) => fields && fields.length > 0 && (type !== "Account" || this.config.settings.fetch_accounts);
+
   fetchAll() {
     const { mappings } = this.config;
     return Promise.all(_.map(mappings, ({ type, fetchFields }) => {
       const fields = _.keys(fetchFields);
-      if (!fields || fields.length === 0) return null;
-      return this.sf.getAllRecords({ type, fields }, (record = {}) => {
-        const traits = this.getRecordTraits(type, record);
-        if (!_.isEmpty(traits)) {
-          this.hull.logger.info("incoming.user", { email: record.Email, ...traits });
-          this.hull.as({ email: record.Email }).traits(traits);
-        }
-      });
+      if (this.shouldFetch(type, fields)) {
+        return this.sf.getAllRecords({ type, fields }, record => this.saveRecordTraits(record));
+      }
+      return Promise.resolve();
     }));
   }
 
@@ -237,24 +281,15 @@ export default class Agent extends EventEmitter {
     const { mappings } = this.config;
     return Promise.all(_.map(mappings, ({ type, fetchFields }) => {
       const fields = _.keys(fetchFields);
-      if (fields && fields.length > 0) {
+      if (this.shouldFetch(type, fields)) {
         return this.sf.getUpdatedRecords(type, { ...options, fields });
       }
-      return { type, fields: fetchFields, records: [] };
-    })).then((changes) => {
-      const promises = [];
-      changes.forEach(({ type, records }) => {
-        records.forEach((record) => {
-          const traits = this.getRecordTraits(type, record);
-          if (!_.isEmpty(traits)) {
-            this.hull.logger.info("incoming.user", { email: record.Email, ...traits });
-            promises.push(this.hull
-              .as({ email: record.Email })
-              .traits(traits));
-          }
-        });
-      });
-      return Promise.all(promises).then(() => { return { changes }; });
+      return [];
+    }))
+    .then(_.flatten)
+    .then((records) => {
+      const promises = records.map(record => this.saveRecordTraits(record));
+      return Promise.all(promises).then(() => { return { records }; });
     });
   }
 
@@ -263,19 +298,67 @@ export default class Agent extends EventEmitter {
     const emails = users.map(u => u.email);
     const sfRecords = this.sf.searchEmails(emails, mappings);
     return sfRecords.then((searchResults) => {
-      const recordsByType = syncRecords(searchResults, users, { mappings });
+      const recordsByType = syncUsers(searchResults, users, { mappings });
       const upsertResults = ["Lead", "Contact"].map((recordType) => {
-        const records = recordsByType[recordType] || [];
-        if (!records.length) return null;
-        return this.sf.upsert(recordType, records).then((results) => {
-          _.map(records, record => this.hull.logger.info("outgoing.user", record));
-          return { recordType, results, records };
-        });
+        const records = recordsByType[recordType];
+        if (records && records.length > 0) {
+          return this.sf.upsert(recordType, records).then((results) => {
+            _.map(records, record => this.hull.logger.info("outgoing.user", record));
+            return { recordType, results, records };
+          });
+        }
+        return Promise.resolve();
       });
       return Promise.all(upsertResults).then((results) => {
         return results.reduce((rr, r) => {
           if (r && r.recordType) {
             rr[r.recordType] = r;
+          }
+          return rr;
+        }, {});
+      });
+    });
+  }
+
+  syncAccounts(accounts) {
+    const mappings = this.config.mappings;
+    const { ids, domains } = accounts.reduce((identifiers, account) => {
+      if (account["salesforce/id"]) {
+        identifiers.ids.push(account["salesforce/id"]);
+      } else if (account.domain) {
+        identifiers.domains.push(account.domain);
+      }
+      return identifiers;
+    }, { ids: [], domains: [] });
+
+    const sfAccountsByDomains = this.sf.searchDomains(domains, mappings);
+    const sfAccountsByIds = this.sf.getRecordsByIds("Account", ids, { fields: Object.keys(mappings.Account.fields) })
+      .then((records) => {
+        // Build an account lookup object by ids
+        return records.reduce((accu, record) => {
+          accu[record.Id] = record;
+          return accu;
+        }, {});
+      });
+
+    return Promise.all([sfAccountsByDomains, sfAccountsByIds]).then((sfRecords) => {
+      // Merge accounts found by ids and by domains
+      const searchResults = Object.assign(sfRecords[0], sfRecords[1]);
+
+      const records = syncAccounts(searchResults, accounts, mappings.Account);
+      let upsertResults = [];
+
+      if (records && records.length > 0) {
+        upsertResults = this.sf.upsert("Account", records, "Id").then((results) => {
+          _.map(records, record => this.hull.logger.info("outgoing.account", record));
+          return { results, records };
+        });
+      }
+
+      return Promise.all(upsertResults).then((results) => {
+        return results.reduce((rr, r) => {
+          if (r) {
+            rr.Account = r;
           }
           return rr;
         }, {});
