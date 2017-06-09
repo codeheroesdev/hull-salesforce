@@ -12,8 +12,7 @@ function increment(metric, value, options) {
   }
 }
 
-// eslint-disable-next-line no-useless-escape
-const RESERVED_CHARACTERS_REGEXP = /\?|\&|\||\!|\{|\}|\[|\]|\(|\)|\^|\~|\*|\:|\+|\-|\"|\'/ig;
+const RESERVED_CHARACTERS_REGEXP = /\?|&|\||!|\{|\}|\[|]|\(|\)|\^|~|\*|:|\+|-|"|'/ig;
 
 function escapeSOSL(str) {
   return str.replace(RESERVED_CHARACTERS_REGEXP, c => `\\${c}`);
@@ -85,7 +84,7 @@ export default class SF {
     this.logger = logger;
   }
 
-  upsert(type, input, externalIDFieldName = "Email") {
+  upsert(type, input = [], externalIDFieldName = "Email") {
     return input.length > 99 ?
       this._upsertBulk(type, input, externalIDFieldName) :
       this._upsertSoap(type, input, externalIDFieldName);
