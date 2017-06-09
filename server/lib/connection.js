@@ -1,6 +1,5 @@
 import jsforce from "jsforce";
 import librato from "librato-node";
-import Hull from "hull";
 
 function increment(metric, value, options) {
   try {

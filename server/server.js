@@ -95,7 +95,7 @@ module.exports = function Server(app, options = {}) {
           }
           return true;
         } catch (err) {
-          hull.logger.error("Error in Users sync", { err });
+          client.logger.error("Error in Users sync", { err });
           return err;
         }
       },

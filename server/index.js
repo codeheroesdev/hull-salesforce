@@ -4,6 +4,7 @@ import server from "./server";
 
 if (process.env.NEW_RELIC_LICENSE_KEY) {
   Hull.logger.warn("starting newrelic with key: ", process.env.NEW_RELIC_LICENSE_KEY);
+  // eslint-disable-next-line global-require
   require("newrelic");
 }
 

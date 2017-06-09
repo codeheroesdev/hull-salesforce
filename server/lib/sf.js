@@ -134,19 +134,17 @@ export default class SF {
                 });
               }
             });
+          } else if (res.success !== "true" || res.errors) {
+            this.logger.error("outgoing.user.error", {
+              errors: res.errors,
+              email: input[0].Email,
+              log_placement: "_upsertSoap.4"
+            });
           } else {
-            if (res.success !== "true" || res.errors) {
-              this.logger.error("outgoing.user.error", {
-                errors: res.errors,
-                email: input[0].Email,
-                log_placement: "_upsertSoap.4"
-              });
-            } else {
-              this.logger.info("outgoing.user.success", {
-                email: input[0].Email,
-                log_placement: "_upsertSoap.5"
-              });
-            }
+            this.logger.info("outgoing.user.success", {
+              email: input[0].Email,
+              log_placement: "_upsertSoap.5"
+            });
           }
           resolve(res);
         }
@@ -184,19 +182,17 @@ export default class SF {
                 });
               }
             });
+          } else if (res.success.toString() !== "true" || res.errors) {
+            this.logger.error("outgoing.user.error", {
+              errors: res.errors,
+              email: input[0].Email,
+              log_placement: "_upsertBulk.4"
+            });
           } else {
-            if (res.success.toString() !== "true" || res.errors) {
-              this.logger.error("outgoing.user.error", {
-                errors: res.errors,
-                email: input[0].Email,
-                log_placement: "_upsertBulk.4"
-              });
-            } else {
-              this.logger.info("outgoing.user.success", {
-                email: input[0].Email,
-                log_placement: "_upsertBulk.5"
-              });
-            }
+            this.logger.info("outgoing.user.success", {
+              email: input[0].Email,
+              log_placement: "_upsertBulk.5"
+            });
           }
           resolve(res);
         }
@@ -260,7 +256,7 @@ export default class SF {
             const chunks = _.chunk(res.ids, 100)
               .map(ids => this.getRecordsByIds(type, ids, { fields }));
 
-            Promise.all(chunks)
+            return Promise.all(chunks)
               .then(_.flatten)
               .then((records) => {
                 resolve(records);
@@ -269,16 +265,14 @@ export default class SF {
                 }
               })
               .catch(reject);
-          } else {
-            resolve([]);
           }
+          return resolve([]);
         }
       );
     });
   }
 
-  exec(fn) {
-    const args = [].slice.call(arguments, 1);
+  exec(fn, ...args) {
     return new Promise((resolve, reject) => {
       this.connection[fn].apply(this.connection, [...args, (err, res) => {
         if (err) {
