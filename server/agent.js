@@ -57,20 +57,19 @@ export default class Agent extends EventEmitter {
     const { organization, secret } = hull.configuration();
     const config = buildConfigFromShip(ship, organization, secret);
     const agent = new Agent(config);
-    const last_sync_at = parseInt(_.get(ship, 'settings.last_sync_at'), 10);
+    const last_sync_at = parseInt(_.get(ship, "settings.last_sync_at"), 10);
     const since = new Date(last_sync_at - 60000);
     if (since && since.getYear() === new Date().getYear()) {
       options.since = since;
     }
 
     return agent.connect().then(() => {
-      const last_sync_at = new Date().getTime();
       return agent.fetchChanges(options).then(() => {
         hull.get(ship.id).then(({ settings }) => {
-          hull.put(ship.id, { settings: {
-            ...settings, last_sync_at
-          }});
-        })
+          hull.put(ship.id, { settings: { ...settings,
+            last_sync_at: new Date().getTime()
+          } });
+        });
       });
     });
   }
@@ -263,7 +262,7 @@ export default class Agent extends EventEmitter {
 
   syncUsers(users) {
     const mappings = this.config.mappings;
-    let emails = users.map((u)=> u.email);
+    let emails = users.filter(u => u.email).map(u => u.email);
     let sfRecords = this.sf.searchEmails(emails, mappings);
     return sfRecords.then((searchResults)=> {
       let recordsByType = syncRecords(searchResults, users, { mappings });
