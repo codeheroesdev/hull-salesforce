@@ -216,23 +216,22 @@ export default class Agent extends EventEmitter {
             const val = record[k];
             if (val != null) {
               return { ...t, [`${source}/${toUnderscore(k)}`]: val };
-            } else {
-              return t;
             }
-
+            return t;
           }, {
-            first_name: { operation: 'setIfNull', value: record.FirstName },
-            last_name:  { operation: 'setIfNull', value: record.LastName },
+            first_name: { operation: "setIfNull", value: record.FirstName },
+            last_name:  { operation: "setIfNull", value: record.LastName },
             [`${source}/id`]: record.Id
           });
           if (!_.isEmpty(traits)) {
             return this.hull
               .as({ email: record.Email })
-              .traits(traits);
+              .traits(traits)
+              .then(() => this.hull.logger.info("incoming.user.success", { email: record.Email, traits }));
           }
         });
       }
-    }))
+    }));
   }
 
   fetchChanges(options = {}) {
@@ -252,7 +251,8 @@ export default class Agent extends EventEmitter {
           if (!_.isEmpty(traits)) {
             return this.hull
               .as({ email: rec.Email })
-              .traits(traits, { source });
+              .traits(traits, { source })
+              .then(() => this.hull.logger.info("incoming.user.success", { email: rec.Email, traits }));
           }
         });
       });
