@@ -210,6 +210,7 @@ export default class Agent extends EventEmitter {
     const { mappings } = this.config;
     return Promise.all(_.map(mappings, ({ type, fetchFields: fields }) => {
       if (fields && fields.length > 0) {
+        this.hull.logger.info("incoming.job.start", { jobName: "fetchAll", type, fetchFields: fields });
         return this.sf.getAllRecords({ type, fields }, (record = {}) => {
           const source = `salesforce_${type.toLowerCase()}`;
           const traits = _.reduce(fields, (t,k) => {
@@ -237,6 +238,7 @@ export default class Agent extends EventEmitter {
   fetchChanges(options = {}) {
     const { mappings } = this.config;
     return Promise.all(_.map(mappings, ({ type, fetchFields }) => {
+      this.hull.logger.info("incoming.job.start", { jobName: "fetchChanges", type, fetchFields });
       if (fetchFields && fetchFields.length > 0) {
         return this.sf.getUpdatedRecords(type, { ...options, fields: fetchFields });
       }
