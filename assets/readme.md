@@ -16,32 +16,33 @@ After successful authentication you will be redirected to your Salesforce connec
 Please refer to following sections to
 
 - [Specify the users who are getting synchronized](#specify-the-users-who-are-getting-synchronized)
-- [Determine the fields to synchronize for Leads](#determine-the-fields-to-synchronize-for-leads)
-- [Determine the fields to synchronize for Contacts](#determine-the-fields-to-synchronize-for-contacts)
+- [Determine the attributes to synchronize for Leads](#determine-the-attributes-to-synchronize-for-leads)
+- [Determine the attributes to synchronize for Contacts](#determine-the-attributes-to-synchronize-for-contacts)
 - [Learn how Hull determines if a user is a Lead or Contact](#learn-how-hull-determines-if-a-user-is-a-lead-or-contact)
 
 ## Features
 
 The Hull Salesforce Connector allows your organization to synchronize leads and contacts from and to our platform. Once you have your data in Hull, you can send it to other tools to keep your entire stack in sync.
 
-The Salesforce connector supports to `create users`, `add traits` and `update traits`.
+The Salesforce connector supports to `create users`, `add attributes` and `update attributes`.
 
 ## Specify the Users who are getting synchronized
 
-By default all users are synchronized between Salesforce and Hull, but you can customize this behavior and explicitly define the segments who are getting synchronized. Go to the “Settings” tab of the connector and locate the section “Connector Configuration”. Specify the segments in the following field:
+The Salesforce Connector fetches updates for all leads and contacts from Salesforce automatically.
+By default all users are sent from Hull to Salesforce as well, but you can customize this behavior and explicitly define the segments who are getting sent. Go to the “Settings” tab of the connector and locate the section “Connector Configuration”. Specify the segments in the following field:
 ![Connector Configuration](./docs/connectorconfig01.png)
 
-## Determine the fields to synchronize for Leads
+## Determine the Attributes to synchronize for Leads
 
-You can customize the fields which are getting synchronized with Salesforce in the section “Leads Sync” of the “Settings” tab. The first list determines the fields who are getting send from Hull to Salesforce. Please make sure that this list contains all required fields to create a lead in your Salesforce system. You can specify for each field whether data in Hull takes precedence over data in Salesforce by toggling the checkbox “overwrite”. If the box is checked, data from Hull will always take update the Lead record; if the box is unchecked, the field in Salesforce will only be updated with data from Hull if it has not been set.
+You can customize the attributes which are getting synchronized with Salesforce in the section “Leads Sync” of the “Settings” tab. The first list determines the attributes who are getting sent from Hull to Salesforce. Please make sure that this list contains all required attributes to create a lead in your Salesforce system. You can specify for each attribute whether data in Hull takes precedence over data in Salesforce by toggling the checkbox “overwrite”. If the box is checked, data from Hull will always take update the Lead record; if the box is unchecked, the attribute in Salesforce will only be updated with data from Hull if it has not been set.
 ![Leads Sync](./docs/leadsync01.png)
-The second list determines the fields Hull fetches from Salesforce. Salesforce data will always take precedence over data in Hull and update the user’s respective traits. Hull saves the data obtained from Salesforce in the trait group “Salesforce Lead”, so no standard trait data will be overwritten.
+The second list determines the attributes Hull fetches from Salesforce. Salesforce data will always take precedence over data in Hull and update the user’s respective attributes. Hull saves the data obtained from Salesforce in the attribute group “Salesforce Lead”, so no standard attribute data will be overwritten.
 
-## Determine the fields to synchronize for Contacts
+## Determine the Attributes to synchronize for Contacts
 
-You can customize the fields which are getting synchronized with Salesforce in the section “Contacts Sync” of the “Settings” tab. The first list determines the fields who are getting send from Hull to Salesforce. You can specify for each field whether data in Hull takes precedence over data in Salesforce by toggling the checkbox “overwrite”. If the box is checked, data from Hull will always take update the Contact record; if the box is unchecked, the field in Salesforce will only be updated with data from Hull if it has not been set.
+You can customize the attributes which are getting synchronized with Salesforce in the section “Contacts Sync” of the “Settings” tab. The first list determines the attributes who are getting sent from Hull to Salesforce. You can specify for each attribute whether data in Hull takes precedence over data in Salesforce by toggling the checkbox “overwrite”. If the box is checked, data from Hull will always take update the Contact record; if the box is unchecked, the attribute in Salesforce will only be updated with data from Hull if it has not been set.
 ![Contacts Sync](./docs/contactsync01.png)
-The second list determines the fields Hull fetches from Salesforce. Salesforce data will always take precedence over data in Hull and update the user’s respective traits. Hull saves the data obtained from Salesforce in the trait group “Salesforce Contact”, so no standard trait data will be overwritten.
+The second list determines the attributes Hull fetches from Salesforce. Salesforce data will always take precedence over data in Hull and update the user’s respective attributes. Hull saves the data obtained from Salesforce in the attribute group “Salesforce Contact”, so no standard attribute data will be overwritten.
 
 ## Connect with a Sandbox Environment
 
@@ -54,6 +55,6 @@ Note: If you want to authenticate against your production environment, change th
 
 When Hull sends a user to Salesforce the system executes the following strategy to determine whether a user has to be treated as a Lead or Contact:
 
-1. Hull checks if a contact with a matching email address exists; if this is the case, the Hull user is treated as a Contact in Salesforce and the selected fields in Salesforce are updated with the data from Hull. When no matching contact is found, step 2 is executed.
-2. Hull checks if a contact with a matching email address exists; if this is the case Hull updates the selected fields in Salesforce. When no matching lead is found, step 3 is executed.
-3. Hull creates a new lead in Salesforce with the selected fields.
+1. Hull checks if a contact with a matching email address exists; if this is the case, the Hull user is treated as a Contact in Salesforce and the selected attributes in Salesforce are updated with the data from Hull. When no matching contact is found, step 2 is executed.
+2. Hull checks if a contact with a matching email address exists; if this is the case Hull updates the selected attributes in Salesforce. When no matching lead is found, step 3 is executed.
+3. Hull creates a new lead in Salesforce with the selected attributes.

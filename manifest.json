@@ -38,8 +38,8 @@
     },
     {
       "name": "synchronized_segments",
-      "title": "Synchronize users belonging to one of these segments",
-      "description": "Synchronizes all users if not set, otherwise only users in the specified segments are synchronized.",
+      "title": "Send users belonging to one of these segments to Salesforce",
+      "description": "Sends all users if not set, otherwise only users in the specified segments are sent. Updates from Salesforce are always fetched for all users.",
       "type": "array",
       "format": "segment",
       "items": {
@@ -108,7 +108,7 @@
     },
     {
       "name" : "contacts_mapping",
-      "title" : "List of Contact fields to send to Salesforce",
+      "title" : "List of Contact fields to send from Hull to Salesforce",
       "type" : "array",
       "format" : "table",
       "default" : [
