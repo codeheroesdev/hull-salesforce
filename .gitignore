@@ -6,3 +6,5 @@ tmp
 config.json
 dist
 build
+
+.vscode
