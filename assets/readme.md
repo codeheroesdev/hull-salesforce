@@ -1,87 +1,60 @@
-[Visit Salesforce website](http://salesforce.com)
+# Hull Salesforce Connector
 
-__The Salesforce Ship allows you to sync your Hull users with Salesforce.__
+The Salesforce Connector enables your team to sync Hull’s user profile data from and to your Salesforce system.
 
-This integration uses Salesforce API to synchronize your Hull users to create and update Salesforce Leads or Contacts.
+## Getting Started
 
+Go to the Connectors page of your Hull organization, click the button “Add Connector” and click “Install” on the Salesforce card. After installation, stay on the “Dashboard” tab to grant the Connector access to your Salesforce system. Please note that you connect to your Production Environment by default. If you want to connect to a Sandbox Environment, please follow the steps under [Connect with a Sandbox Environment](#connect-with-a-sandbox-environment) before you click on “Continue with Salesforce:
+![Getting Started Step 1](./docs/gettingstarted01.png)
 
-## Getting started
+You will get redirected to the login screen of Salesforce. Authenticate the request on the Salesforce website with your username and password:
+![Getting Started Step 2](./docs/gettingstarted02.png)
 
-### Fields mapping
+After successful authentication you will be redirected to your Salesforce connector on Hull. You are now ready to complete your setup:
+![Getting Started Step 3](./docs/gettingstarted03.png)
 
-The default setup comes with a standard mapping for common fields like `Email`, `FirstName`, `LastName` or `Country`, which should cover most use cases.
+Please refer to following sections to
 
-For example, the following Hull User
+- [Specify the users who are getting synchronized](#specify-the-users-who-are-getting-synchronized)
+- [Determine the attributes to synchronize for Leads](#determine-the-attributes-to-synchronize-for-leads)
+- [Determine the attributes to synchronize for Contacts](#determine-the-attributes-to-synchronize-for-contacts)
+- [Learn how Hull determines if a user is a Lead or Contact](#learn-how-hull-determines-if-a-user-is-a-lead-or-contact)
 
-    {
-      "id": "51249ea3ae12bd621a000007",
-      "last_seen_at": "2015-11-26T14:21:37Z",
-      "updated_at": "2015-11-26T14:21:37Z",
-      "created_at": "2013-02-20T10:00:03Z",
-      "name": "Johnny Hull",
-      "email": "hello@hull.io",
-      "main_identity": "twitter",
-      "first_name": "Johnny",
-      "last_name": "Hull",
-      "picture": "http://a0.twimg.com/profile_images/1250949364/gravatar_normal.jpg",
-      "contact_email": "hello@hull.io",
-      "phone": "+33144444444",
-      "address": {
-        "country" : "France",
-        "city" : "Paris"
-      }
-      ...
-    }
+## Features
 
+The Hull Salesforce Connector allows your organization to synchronize leads and contacts from and to our platform. Once you have your data in Hull, you can send it to other tools to keep your entire stack in sync.
 
-will be synchronized as the following Lead on Salesforce :
+The Salesforce connector supports to `create users`, `add attributes` and `update attributes`.
 
-    {
-      "Email" : "hello@hull.io",
-      "FirstName" : "Johnny",
-      "LastName" : "Hull",
-      "Phone" : "+33144444444",
-      "Country" : "France",
-      "City" : "Paris",
-      "Company" : "[Unknown]"
-    }
+## Specify the Users who are getting synchronized
 
+The Salesforce Connector fetches updates for all leads and contacts from Salesforce automatically.
+By default all users are sent from Hull to Salesforce as well, but you can customize this behavior and explicitly define the segments who are getting sent. Go to the “Settings” tab of the connector and locate the section “Connector Configuration”. Specify the segments in the following field:
+![Connector Configuration](./docs/connectorconfig01.png)
 
-Please note : The `Company` field is a required field on Saleforce Lead objects. The standard mapping will set it to `[Unknown]` by default.
+## Determine the Attributes to synchronize for Leads
 
+You can customize the attributes which are getting synchronized with Salesforce in the section “Leads Sync” of the “Settings” tab. The first list determines the attributes who are getting sent from Hull to Salesforce. Please make sure that this list contains all required attributes to create a lead in your Salesforce system. You can specify for each attribute whether data in Hull takes precedence over data in Salesforce by toggling the checkbox “overwrite”. If the box is checked, data from Hull will always take update the Lead record; if the box is unchecked, the attribute in Salesforce will only be updated with data from Hull if it has not been set.
+![Leads Sync](./docs/leadsync01.png)
+The second list determines the attributes Hull fetches from Salesforce. Salesforce data will always take precedence over data in Hull and update the user’s respective attributes. Hull saves the data obtained from Salesforce in the attribute group “Salesforce Lead”, so no standard attribute data will be overwritten.
 
-### Custom mappings
+## Determine the Attributes to synchronize for Contacts
 
-If you capture specific information that need to be mapped to Salesforce custom fields, the settings section of this ship allows you to configure a custom mapping.
+You can customize the attributes which are getting synchronized with Salesforce in the section “Contacts Sync” of the “Settings” tab. The first list determines the attributes who are getting sent from Hull to Salesforce. You can specify for each attribute whether data in Hull takes precedence over data in Salesforce by toggling the checkbox “overwrite”. If the box is checked, data from Hull will always take update the Contact record; if the box is unchecked, the attribute in Salesforce will only be updated with data from Hull if it has not been set.
+![Contacts Sync](./docs/contactsync01.png)
+The second list determines the attributes Hull fetches from Salesforce. Salesforce data will always take precedence over data in Hull and update the user’s respective attributes. Hull saves the data obtained from Salesforce in the attribute group “Salesforce Contact”, so no standard attribute data will be overwritten.
 
-Let's for example capture the user's company using Hull's [Traits API](http://hull.io/docs/references/hull_js#traits)
+## Connect with a Sandbox Environment
 
-In javascript :
+You can configure the Connector to connect to a specific Sandbox system. Go to the tab “Settings” and locate the field “Salesforce Login Url” under the section “Advanced”. Enter the login url of your Sandbox environment here and click “Save” to persist your changes.
+Switch to the tab “Dashboard” and click on “Start Over” to authenticate against your Sandbox system; the steps to authenticate are described in [Getting Started](#getting-started).
+![Advanced Settings - Sandbox](./docs/advancedsettings01.png)
+Note: If you want to authenticate against your production environment, change this setting back to `https://login.salesforce.com` and click “Start Over” on the “Dashboard” tab. It is not recommended to switch between Salesforce environments within the same Hull organization because it can lead to inconsistent data. Please make sure that you understand the ramifications when changing this parameter.
 
-    Hull.traits({ company: 'Hull' })
+## Learn how Hull determines if a user is a Lead or Contact
 
-And in the settings section of the ship, let's map this trait to the `Company` field on Salesforce.
+When Hull sends a user to Salesforce the system executes the following strategy to determine whether a user has to be treated as a Lead or Contact:
 
-![Custom Mapping](./images/mapping_company.png "Custom Mapping")
-
-
-### Synchronizing Contacts
-
-You can also choose to synchronize with Salesforce `Contacts`. If this feature is activated, we will first look for a `Contact` with a matching email address. If we find one, it will be synchronized, if not, a matching `Lead` will be updated or created.
-
-As with `Leads` you can define custom mappings for your Contacts.
-
-
-## Salesforce API access
-
-Authenticated access to Salesforce API is required for this integration to work. A Salesforce account email, password and security token will be stored in plain text in our database and used to make API calls to your Salesforce account.
-
-The default password policy on Salesforce is to expire passwords after 90 days. When the password you provided expires, we won't be able to make API calls anymore, this integration will stop working.
-
-You can setup your passwords to never expire on Salesforce in `Administration Setup > Security Controls > Passwod Policies`.
-
-
-
-
-
-
+1. Hull checks if a contact with a matching email address exists; if this is the case, the Hull user is treated as a Contact in Salesforce and the selected attributes in Salesforce are updated with the data from Hull. When no matching contact is found, step 2 is executed.
+2. Hull checks if a contact with a matching email address exists; if this is the case Hull updates the selected attributes in Salesforce. When no matching lead is found, step 3 is executed.
+3. Hull creates a new lead in Salesforce with the selected attributes.

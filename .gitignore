@@ -6,3 +6,7 @@ tmp
 config.json
 dist
 build
+
+.vscode
+
+package-lock.json

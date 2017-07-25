@@ -1,10 +1,10 @@
 {
   "name" : "Salesforce",
   "tags": ["outgoing","oneColumn", "batch"],
-  "description" : "Send Users as Leads or Contacts to Salesforce with custom mappings",
+  "description" : "Enrich your Leads and Contacts in Salesforce and Trigger Powerful Workflows",
   "readme" : "readme.md",
   "admin" : "/auth",
-  "version" : "0.2.5",
+  "version" : "0.2.6",
   "picture": "picture.png",
   "ui": false,
   "settings" : [
@@ -15,12 +15,6 @@
     }
   ],
   "private_settings" : [
-    {
-      "name": "salesforce_oauth_url",
-      "type": "string",
-      "format": "hidden",
-      "default": "https://login.salesforce.com"
-    },
     {
       "name": "refresh_token",
       "type": "string",
@@ -37,9 +31,15 @@
       "format" : "hidden"
     },
     {
+      "name": "connector_hero",
+      "title": "Connector Configuration",
+      "format": "title",
+      "type": "string"
+    },
+    {
       "name": "synchronized_segments",
-      "title": "Filter users",
-      "description": "Only send Users matching one or more of these segments. Sends everyone if empty.",
+      "title": "Send users belonging to one of these segments to Salesforce",
+      "description": "Sends all users if not set, otherwise only users in the specified segments are sent. Updates from Salesforce are always fetched for all users.",
       "type": "array",
       "format": "segment",
       "items": {
@@ -55,7 +55,7 @@
     },
     {
       "name" : "leads_mapping",
-      "title" : "List of Lead fields to push to Salesforce",
+      "title" : "List of Lead fields to send from Hull to Salesforce",
       "type" : "array",
       "format" : "table",
       "default" : [
@@ -108,7 +108,7 @@
     },
     {
       "name" : "contacts_mapping",
-      "title" : "List of Contact fields to push to Salesforce",
+      "title" : "List of Contact fields to send from Hull to Salesforce",
       "type" : "array",
       "format" : "table",
       "default" : [
@@ -152,6 +152,19 @@
       "options" : {
         "loadOptions" : "/schema/contact"
       }
+    },
+    {
+      "name": "advance_hero",
+      "title": "Advanced Settings",
+      "format": "title",
+      "type": "string"
+    },
+    {
+      "name": "salesforce_oauth_url",
+      "title": "Salesforce Login Url",
+      "type": "string",
+      "default": "https://login.salesforce.com",
+      "description": "Use 'https://login.salesforce.com' to connect to your production environment. See instructions how to connect to a sandbox environment." 
     }
   ],
   "schedules": [

@@ -1,3 +1,7 @@
+## v0.2.6
+- improved documentation
+- improved settings page
+
 ## v0.2.5
 - revert the value of limit above which the SFDC client switch to bulk API
 
