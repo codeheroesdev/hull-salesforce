@@ -2,7 +2,7 @@ import _ from "lodash";
 import cors from "cors";
 import librato from "librato-node";
 import Hull from "hull";
-import { notifHandler, batchHandler, oAuthHandler } from "hull/lib/utils";
+import { notifHandler, oAuthHandler } from "hull/lib/utils";
 import { Strategy } from "passport-forcedotcom";
 
 import Agent from "./lib/agent";
@@ -72,62 +72,54 @@ module.exports = function Server(app, options = {}) {
     });
   });
 
-  app.post("/notify", notifHandler({
-    // TODO: add an accountHandlerOptions here ?
-    userHandlerOptions: {
-      groupTraits: false,
-      maxSize: 1,
-      maxTime: 1
-    },
-    hostSecret,
-    onSusbscribe(message, context) {
-      Hull.logger.warn("Hello new subscriber !", { message, context });
-    },
-    onError(message, status) {
-      Hull.logger.warn("Error", status, message);
-    },
-    handlers: {
-      "user:update": ({ client, ship }, messages) => {
-        try {
-          Agent.syncUsers({ client, ship }, messages);
-          if (process.env.LIBRATO_TOKEN && process.env.LIBRATO_USER) {
-            librato.increment("user_report:update", 1, { source: ship.id });
-          }
-          return true;
-        } catch (err) {
-          client.logger.error("Error in Users sync", { err });
-          return err;
-        }
+  function handlerFactory(isBatch = false) {
+    return notifHandler({
+      // TODO: add an accountHandlerOptions here ?
+      userHandlerOptions: {
+        groupTraits: false,
+        maxSize: 1,
+        maxTime: 1
       },
-      // account:update messages are not batched and are received one by one
-      "account:update": ({ ship, client }, message) => {
-        const messages = [message];
-        try {
-          Agent.syncAccounts({ client, ship }, messages);
-          if (process.env.LIBRATO_TOKEN && process.env.LIBRATO_USER) {
-            librato.increment("account_report:update", 1, { source: ship.id });
+      hostSecret,
+      onSusbscribe(message, context) {
+        Hull.logger.warn("Hello new subscriber !", { message, context });
+      },
+      onError(message, status) {
+        Hull.logger.warn("Error", status, message);
+      },
+      handlers: {
+        "user:update": ({ client, ship }, messages) => {
+          try {
+            Agent.syncUsers({ client, ship }, messages, isBatch);
+            if (process.env.LIBRATO_TOKEN && process.env.LIBRATO_USER) {
+              librato.increment("user_report:update", 1, { source: ship.id });
+            }
+            return true;
+          } catch (err) {
+            client.logger.error("Error in Users sync", { err });
+            return err;
           }
-          return true;
-        } catch (err) {
-          Hull.logger.warn("Error in Accounts sync", err, err.stack);
-          return err;
+        },
+        // account:update messages are not batched and are received one by one
+        "account:update": ({ ship, client }, message) => {
+          const messages = [message];
+          try {
+            Agent.syncAccounts({ client, ship }, messages, isBatch);
+            if (process.env.LIBRATO_TOKEN && process.env.LIBRATO_USER) {
+              librato.increment("account_report:update", 1, { source: ship.id });
+            }
+            return true;
+          } catch (err) {
+            Hull.logger.warn("Error in Accounts sync", err, err.stack);
+            return err;
+          }
         }
       }
-    }
-  }));
+    });
+  }
 
-  app.post("/batch", batchHandler({
-    hostSecret,
-    batchSize: 2000,
-    groupTraits: false,
-    handler(notifications = [], { ship, hull }) {
-      const users = notifications.map(n => n.message);
-      return Agent
-        .syncUsers(hull, ship, users, { applyFilters: true })
-        .then(() => console.warn("batch done"))
-        .catch(err => hull.logger.error("batch err", { err }));
-    }
-  }));
+  app.post("/notify", handlerFactory(false));
+  app.post("/batch", handlerFactory(true));
 
   app.get("/schema(/:type)", cors(), (req, res) => {
     const { type } = req.params || {};

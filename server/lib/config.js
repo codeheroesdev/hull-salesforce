@@ -5,8 +5,8 @@ import { getTypes, getServiceAttributeToHullTopLevel, getServiceAttributeToHullT
 
 function generateShipSecret(shipId, secret) {
   return createHmac("sha256", secret)
-          .update(shipId)
-          .digest("hex");
+    .update(shipId)
+    .digest("hex");
 }
 
 function getHullClient(organization, id, secret) {
@@ -52,7 +52,7 @@ export function buildConfigFromShip(ship, organization, secret) {
     access_token,
     refresh_token,
     instance_url,
-    synchronized_user_segments,
+    synchronized_segments,
     synchronized_account_segments,
     fetch_accounts,
     salesforce_login,
@@ -91,7 +91,7 @@ export function buildConfigFromShip(ship, organization, secret) {
     settings: { fetch_accounts },
     salesforce: { ...credentials, oauth2 },
     sync: {
-      userSegmentIds: synchronized_user_segments || [],
+      userSegmentIds: synchronized_segments || [],
       accountSegmentIds: synchronized_account_segments || [],
       fetchRange: "3d",
       batchSize: 200

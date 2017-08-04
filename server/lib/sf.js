@@ -2,13 +2,15 @@ import _ from "lodash";
 import Promise from "bluebird";
 import librato from "librato-node";
 
-function increment(metric, value, options) {
+function increment(metric, value, options, logger) {
   try {
-    if (librato && librato.increment) {
+    if (process.env.LIBRATO_TOKEN && process.env.LIBRATO_USER) {
       librato.increment(metric, value, options);
     }
   } catch (err) {
-    // console.warn('Librato error', err)
+    if (logger && logger.error) {
+      logger.error("librato.error", err);
+    }
   }
 }
 
@@ -100,7 +102,7 @@ export default class SF {
       };
       return this.connection.soap._invoke("upsert", message, false, (err, res) => {
         if (err) {
-          increment("salesforce:errors", 1, { source: this.connection._shipId });
+          increment("salesforce:errors", 1, { source: this.connection._shipId }, this.logger);
 
           let errors = err;
 
@@ -119,7 +121,7 @@ export default class SF {
         } else {
           if (_.isArray(res)) {
             res.forEach((r, idx) => {
-              increment("salesforce:errors", 1, { source: this.connection._shipId });
+              increment("salesforce:errors", 1, { source: this.connection._shipId }, this.logger);
               if (r.success !== "true") {
                 this.logger.error("outgoing.user.error", {
                   errors: r.errors,
@@ -167,7 +169,7 @@ export default class SF {
         } else {
           if (_.isArray(res)) {
             res.forEach((r, idx) => {
-              increment("salesforce:errors", 1, { source: this.connection._shipId });
+              increment("salesforce:errors", 1, { source: this.connection._shipId }, this.logger);
               if (r.success.toString() !== "true") {
                 this.logger.error("outgoing.user.error", {
                   email: input[idx].Email,
@@ -260,7 +262,7 @@ export default class SF {
               .then((records) => {
                 resolve(records);
                 if (records && records.length) {
-                  increment("salesforce:updated_records", records.length, { source: this.connection._shipId });
+                  increment("salesforce:updated_records", records.length, { source: this.connection._shipId }, this.logger);
                 }
               })
               .catch(reject);

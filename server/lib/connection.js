@@ -22,8 +22,6 @@ function measure(metric, value, options) {
 }
 
 export default class Connection extends jsforce.Connection {
-
-
   setShipId(shipId) {
     this._shipId = shipId;
   }

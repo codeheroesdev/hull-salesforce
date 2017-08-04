@@ -27,12 +27,24 @@ function getUsersMatchingSegments(users, segmentIds = []) {
 const Cache = cacheManager.caching({ store: "memory", max: 100, ttl: 60 });
 
 export default class Agent extends EventEmitter {
-
-  static syncUsers({ client, ship }, messages) {
+  static syncUsers({ client, ship }, messages, ignoreSegments) {
     const { organization, secret } = client.configuration();
     const config = buildConfigFromShip(ship, organization, secret);
     const agent = new Agent(config);
-    const matchingUsers = getUsersMatchingSegments(messages, config.sync.userSegmentIds);
+    let matchingUsers = [];
+
+    if (ignoreSegments === true) {
+      matchingUsers = messages;
+    } else {
+      matchingUsers = getUsersMatchingSegments(messages, config.sync.userSegmentIds);
+      const skippedUsers = _.filter(messages, (u) => {
+        return !_.includes(messages, (mu) => {
+          return mu.id === u.id;
+        });
+      });
+      _.map(skippedUsers, usr => client.logger.info("outgoing.user.skip", { reason: "User does not belong to one of the whitelisted segments.", user: _.pick(usr.user, "id", "external_id", "anonymous_ids", "email", "domain") }));
+    }
+
     let result = Promise.resolve({});
     if (matchingUsers.length > 0) {
       result = agent.connect().then(() => {
@@ -42,11 +54,22 @@ export default class Agent extends EventEmitter {
     return result;
   }
 
-  static syncAccounts({ client, ship }, messages) {
+  static syncAccounts({ client, ship }, messages, ignoreSegments) {
     const { organization, secret } = client.configuration();
     const config = buildConfigFromShip(ship, organization, secret);
     const agent = new Agent(config);
-    const matchingAccounts = getUsersMatchingSegments(messages, config.sync.accountSegmentIds);
+    let matchingAccounts = [];
+    if (ignoreSegments === true) {
+      matchingAccounts = messages;
+    } else {
+      matchingAccounts = getUsersMatchingSegments(messages, config.sync.accountSegmentIds);
+      const skippedAccounts = _.filter(messages, (a) => {
+        return !_.includes(messages, (ma) => {
+          return ma.id === a.id;
+        });
+      });
+      _.map(skippedAccounts, acct => client.logger.info("outgoing.account.skip", { reason: "Account does not belong to one of the whitelisted segments.", account: acct }));
+    }
     let result = Promise.resolve({});
     if (matchingAccounts.length > 0) {
       result = agent.connect().then(() => {
@@ -235,7 +258,6 @@ export default class Agent extends EventEmitter {
       const promises = [];
 
       switch (type) {
-
         case "Account":
           this.hull.logger.info("incoming.account", { traits });
           return this.hull
@@ -299,11 +321,11 @@ export default class Agent extends EventEmitter {
       }
       return [];
     }))
-    .then(_.flatten)
-    .then((records) => {
-      const promises = records.map(record => this.saveRecordTraits(record));
-      return Promise.all(promises).then(() => { return { records }; });
-    });
+      .then(_.flatten)
+      .then((records) => {
+        const promises = records.map(record => this.saveRecordTraits(record));
+        return Promise.all(promises).then(() => { return { records }; });
+      });
   }
 
   syncUsers(users) {
@@ -316,7 +338,7 @@ export default class Agent extends EventEmitter {
         const records = recordsByType[recordType];
         if (records && records.length > 0) {
           return this.sf.upsert(recordType, records).then((results) => {
-            _.map(records, record => this.hull.logger.info("outgoing.user", record));
+            _.map(records, record => this.hull.logger.info("outgoing.user.start", record));
             return { recordType, results, records };
           });
         }

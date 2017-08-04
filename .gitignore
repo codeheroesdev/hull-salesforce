@@ -13,3 +13,5 @@ package-lock.json
 
 # Mac tmp files
 .DS_Store
+.vscode
+package-lock.json
