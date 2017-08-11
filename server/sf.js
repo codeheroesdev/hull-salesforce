@@ -72,6 +72,7 @@ export class SF {
               if (r.success !== 'true') {
                 console.log('upsert error', JSON.stringify({ res: r, input: input[idx] }));
                 this.logger.error("outgoing.user.error", {
+                  hull_summary: `Sending data to Salesforce returned an error: ${_.get(r, "errors.message")}`,
                   errors: r.errors,
                   email: input[idx].Email,
                   log_placement: "_upsertSoap.2"
@@ -86,6 +87,7 @@ export class SF {
           } else {
             if (res.success !== 'true' || res.errors) {
               this.logger.error("outgoing.user.error", {
+                hull_summary: `Sending data to Salesforce returned an error: ${_.get(res, "errors.message")}`,
                 errors: res.errors,
                 email: input[0].Email,
                 log_placement: "_upsertSoap.4"
