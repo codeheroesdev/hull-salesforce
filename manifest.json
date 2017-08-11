@@ -4,7 +4,7 @@
   "description" : "Enrich your Leads and Contacts in Salesforce and Trigger Powerful Workflows",
   "readme" : "readme.md",
   "admin" : "/auth",
-  "version" : "0.2.6",
+  "version" : "0.2.7",
   "picture": "picture.png",
   "ui": false,
   "settings" : [
@@ -164,7 +164,7 @@
       "title": "Salesforce Login Url",
       "type": "string",
       "default": "https://login.salesforce.com",
-      "description": "Use 'https://login.salesforce.com' to connect to your production environment. See instructions how to connect to a sandbox environment." 
+      "description": "Use 'https://login.salesforce.com' to connect to your production environment. See instructions how to connect to a sandbox environment."
     }
   ],
   "schedules": [

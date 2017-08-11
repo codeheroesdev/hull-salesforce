@@ -1,3 +1,6 @@
+## v0.2.7
+- logging with the `hull_summary` param for the notification
+
 ## v0.2.6
 - improved documentation
 - improved settings page
