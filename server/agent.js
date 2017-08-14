@@ -156,7 +156,13 @@ export default class Agent extends EventEmitter {
   connectWithToken() {
     if (this._connect) return this._connect;
     const shipId = this.config.hull.id;
-    const conn = new Connection(this.config.salesforce);
+    let conn;
+    try {
+      conn = new Connection(this.config.salesforce);
+    } catch(err) {
+      return Promise.reject(err);
+    }
+
     conn.setShipId(shipId);
 
     this.hull = new Hull(this.config.hull);

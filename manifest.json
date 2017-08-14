@@ -4,7 +4,7 @@
   "description" : "Enrich your Leads and Contacts in Salesforce and Trigger Powerful Workflows",
   "readme" : "readme.md",
   "admin" : "/auth",
-  "version" : "0.2.7",
+  "version" : "0.2.8",
   "picture": "picture.png",
   "ui": false,
   "settings" : [

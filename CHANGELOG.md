@@ -1,3 +1,6 @@
+## v0.2.8
+- adds basic status endpoint with healthcheck
+
 ## v0.2.7
 - logging with the `hull_summary` param for the notification
 

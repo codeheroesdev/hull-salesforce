@@ -10,6 +10,7 @@ import { renderFile } from "ejs";
 
 import BatchSyncHandler from "./batch-sync";
 import Agent from "./agent";
+import statusCheck from "./lib/status-check";
 
 
 function save(hull, ship, settings) {
@@ -173,6 +174,8 @@ export default function Server({ hostSecret }) {
       res.json({ ok: false, error: err.message, options: [] });
     });
   });
+
+  app.all("/status", Middleware({ hostSecret }), statusCheck);
 
   return {
     listen: port => app.listen(port),
