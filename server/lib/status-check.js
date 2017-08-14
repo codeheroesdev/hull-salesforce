@@ -10,12 +10,12 @@ export default function statusCheck(req, res) {
 
   if (_.get(ship, "private_settings.instance_url") && !_.get(ship, "private_settings.access_token")) {
     status = "error";
-    messages.push("Missing API access token.");
+    messages.push("External service credentials aren’t set: missing API access token.");
   }
 
   if (_.get(ship, "private_settings.instance_url") && !_.get(ship, "private_settings.refresh_token")) {
     status = "error";
-    messages.push("Missing API refresh token.");
+    messages.push("External service credentials aren’t set: missing API refresh token.");
   }
 
   if (
@@ -23,7 +23,7 @@ export default function statusCheck(req, res) {
     && (!_.get(ship, "private_settings.salesforce_login") || !_.get(ship, "private_settings.salesforce_password"))
   ) {
     status = "error";
-    messages.push("Missing API login and password.");
+    messages.push("External service credentials aren’t set: missing API login and password.");
   }
 
   if (messages.length === 0) {

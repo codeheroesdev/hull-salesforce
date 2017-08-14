@@ -38,3 +38,9 @@ To run the tests suite :
 And in tdd mode
 
     gulp tdd
+
+### Status:
+
+  * `External service credentials aren’t set: missing API access token.` - we don't have an access token set
+  * `External service credentials aren’t set: missing API refresh token.` - we don't have a refresh token set
+  * `External service credentials aren’t set: missing API login and password.` - we don't have login or password set

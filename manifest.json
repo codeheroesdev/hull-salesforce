@@ -172,6 +172,11 @@
       "url": "/sync",
       "type": "cron",
       "value": "*/5 * * * *"
+    },
+    {
+      "url": "/status",
+      "type": "cron",
+      "value": "*/30 * * * *"
     }
   ],
   "subscriptions" : [ { "url" : "/notify" } ]
